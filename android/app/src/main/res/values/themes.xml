@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      Compose draws everything, so this only has to get the window right before
+      the first frame: paper-coloured background, dark status bar icons.
+      #FDF4DD is the paper token from globals.css.
+    -->
+    <style name="Theme.TimesTableTradies" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/pop_paper</item>
+        <item name="android:statusBarColor">@color/pop_paper</item>
+        <item name="android:navigationBarColor">@color/pop_paper</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
+    </style>
+</resources>

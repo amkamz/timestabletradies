@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Mirrors PopTokens.Paper / PopTokens.Ink. See §0.4 on generating these. -->
+    <color name="pop_paper">#FDF4DD</color>
+    <color name="pop_ink">#111111</color>
+</resources>

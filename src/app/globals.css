@@ -1,0 +1,344 @@
+@import "tailwindcss";
+
+/* ============================================================
+   TOOLBOX POP — design tokens
+   Ported from "Times Table Tradie - Screens.dc.html"
+   ============================================================ */
+
+@theme {
+  /* ---- ink & paper ---- */
+  --color-ink: #111111;
+  --color-ink-soft: #2a2722;
+  --color-paper: #fdf4dd;
+  --color-paper-dot: #e9dcae;
+  --color-canvas: #e4e1d8;
+
+  /* ---- brand ---- */
+  --color-red: #e5322d;
+  --color-red-deep: #c22620;
+  --color-red-tint: #ffd9d7;
+
+  --color-teal: #17b5a4;
+  --color-teal-light: #8fd8cd;
+  --color-teal-pale: #bfeee7;
+  --color-teal-tint: #dff3ef;
+  --color-teal-deep: #0f7c70;
+  --color-teal-mist: #d6f5f0;
+  --color-teal-wash: #eafffb;
+
+  --color-yellow: #ffd400;
+  --color-yellow-tint: #fff3d6;
+  --color-yellow-deep: #7a6a00;
+  --color-amber: #e0a021;
+  --color-amber-deep: #a8721a;
+
+  --color-blue: #3f7fd1;
+  --color-orange: #e0842b;
+  --color-brick: #d2552e;
+
+  /* ---- neutrals ---- */
+  --color-slate: #2b2f36;
+  --color-slate-deep: #15171b;
+  --color-slate-panel: #22262c;
+  --color-mud: #7a7266;
+  --color-mud-light: #8a857c;
+  --color-stone: #9a948a;
+  --color-sand: #a99a72;
+  --color-sand-light: #b7ab86;
+  --color-sand-pale: #cbbf9f;
+  --color-sand-fill: #e0d7bd;
+  --color-sand-panel: #efe8d4;
+  --color-bone: #efe1c4;
+
+  /* ---- mastery ladder (colourblind-safe, paired with icons) ---- */
+  --color-grade-none: #d8d2c4;
+  --color-grade-bronze: #c17c3a;
+  --color-grade-silver: #9aa4ad;
+  --color-grade-gold: #edb521;
+  --color-grade-blue: #2f6fd0;
+
+  /* ---- type ---- */
+  --font-display: var(--font-titan), "Titan One", system-ui, sans-serif;
+  --font-sans: var(--font-nunito), "Nunito", system-ui, sans-serif;
+  --font-mono: var(--font-space-mono), "Space Mono", ui-monospace, monospace;
+
+  /* ---- hard-edged toolbox shadows ---- */
+  --shadow-pop-sm: 3px 3px 0 #111111;
+  --shadow-pop: 4px 5px 0 #111111;
+  --shadow-pop-lg: 6px 7px 0 #111111;
+  --shadow-phone: 0 22px 50px -22px rgba(20, 30, 45, 0.7);
+}
+
+/* ============================================================
+   BASE
+   ============================================================ */
+
+:root {
+  color-scheme: light;
+  /* Accessibility knobs, driven by the settings screen (I1). */
+  --a11y-text-scale: 1;
+  --a11y-motion: 1;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: calc(100% * var(--a11y-text-scale));
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-weight: 700;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Dyslexia-friendly font toggle (I1). Uses widely-installed faces with
+   generous letter shapes; falls back to the system UI stack. */
+html[data-font="dyslexic"] body,
+html[data-font="dyslexic"] .font-display,
+html[data-font="dyslexic"] .font-sans {
+  font-family: "Atkinson Hyperlegible", "Comic Sans MS", Verdana, sans-serif !important;
+  letter-spacing: 0.01em;
+  word-spacing: 0.08em;
+}
+
+/* High-contrast mode (I1). Flattens tints and forces AAA-grade contrast. */
+html[data-contrast="high"] {
+  --color-paper: #ffffff;
+  --color-canvas: #ffffff;
+  --color-mud: #3d3830;
+  --color-mud-light: #3d3830;
+  --color-stone: #3d3830;
+  --color-sand: #4a4335;
+  --color-teal: #0b6a5f;
+  --color-teal-deep: #064f47;
+  --color-red: #b8231e;
+  --color-amber-deep: #6d4a10;
+  --color-blue: #22509a;
+}
+
+html[data-contrast="high"] .pop-dots {
+  background-image: none;
+}
+
+/* ============================================================
+   MOTION — every animation respects the reduced-motion setting
+   and the OS-level preference.
+   ============================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --a11y-motion: 0;
+  }
+}
+
+html[data-motion="reduced"] {
+  --a11y-motion: 0;
+}
+
+html[data-motion="reduced"] *,
+html[data-motion="reduced"] *::before,
+html[data-motion="reduced"] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ============================================================
+   FOCUS — visible on every interactive surface, 3px against ink.
+   WCAG 2.2 SC 2.4.11 / 2.4.13 (focus not obscured, focus appearance).
+   ============================================================ */
+
+:focus-visible {
+  outline: 4px solid var(--color-blue);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+html[data-contrast="high"] :focus-visible {
+  outline-color: #000000;
+  outline-width: 5px;
+}
+
+/* Skip link, first tab stop on every page. */
+.skip-link {
+  position: absolute;
+  left: 8px;
+  top: -100px;
+  z-index: 200;
+  background: var(--color-yellow);
+  color: var(--color-ink);
+  border: 3px solid var(--color-ink);
+  border-radius: 12px;
+  padding: 10px 18px;
+  font-family: var(--font-display);
+  transition: top 0.15s ease;
+}
+
+.skip-link:focus {
+  top: 8px;
+}
+
+/* ============================================================
+   UTILITIES
+   ============================================================ */
+
+/* The dotted worksite paper texture used behind most screens. */
+.pop-dots {
+  background-image: radial-gradient(var(--color-paper-dot) 1.5px, transparent 1.5px);
+  background-size: 16px 16px;
+}
+
+/* Same texture, for the saturated (coloured) screens. */
+.pop-dots-light {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.16) 1.5px, transparent 1.5px);
+  background-size: 18px 18px;
+}
+
+/* Hazard tape band. */
+.pop-hazard {
+  background: repeating-linear-gradient(
+    45deg,
+    var(--color-yellow),
+    var(--color-yellow) 16px,
+    var(--color-ink) 16px,
+    var(--color-ink) 32px
+  );
+}
+
+/* Hatched placeholder fill, for art that an illustrator will replace. */
+.pop-hatch {
+  background: repeating-linear-gradient(
+    45deg,
+    rgba(0, 0, 0, 0.06),
+    rgba(0, 0, 0, 0.06) 8px,
+    transparent 8px,
+    transparent 16px
+  );
+}
+
+.pop-hatch-light {
+  background: repeating-linear-gradient(
+    45deg,
+    rgba(255, 255, 255, 0.16),
+    rgba(255, 255, 255, 0.16) 8px,
+    transparent 8px,
+    transparent 16px
+  );
+}
+
+.pop-hatch-red {
+  background: repeating-linear-gradient(
+    45deg,
+    rgba(229, 50, 45, 0.14),
+    rgba(229, 50, 45, 0.14) 8px,
+    transparent 8px,
+    transparent 16px
+  );
+}
+
+/* Buttons and cards press into the page instead of floating. */
+.pop-press {
+  transition:
+    transform 0.08s ease,
+    box-shadow 0.08s ease;
+}
+
+.pop-press:active:not(:disabled) {
+  transform: translate(3px, 4px);
+  box-shadow: 0 0 0 #111111 !important;
+}
+
+.pop-press:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* Hide scrollbars inside the phone frames without disabling scroll. */
+.pop-scroll {
+  scrollbar-width: none;
+}
+
+.pop-scroll::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+/* Screen-reader-only text. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+@keyframes pop-in {
+  from {
+    transform: scale(0.86) rotate(-4deg);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1) rotate(-3deg);
+    opacity: 1;
+  }
+}
+
+@keyframes pop-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-6px);
+  }
+  75% {
+    transform: translateX(6px);
+  }
+}
+
+@keyframes pop-rise {
+  from {
+    transform: translateY(14px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.anim-pop-in {
+  /* ease-out-quint — decelerates hard into place, no overshoot. */
+  animation: pop-in 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.anim-shake {
+  animation: pop-shake 0.3s ease both;
+}
+
+.anim-rise {
+  animation: pop-rise 0.3s ease both;
+}

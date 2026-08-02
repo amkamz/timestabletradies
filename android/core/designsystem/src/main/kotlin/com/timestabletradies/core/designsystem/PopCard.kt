@@ -8,7 +8,10 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
@@ -69,6 +72,12 @@ fun Modifier.popPaper(
  *
  * Scrolling is on the screen rather than each card so long content behaves the
  * same everywhere, and so the dot grid stays fixed behind it.
+ *
+ * The paper deliberately fills the whole window — including behind the status
+ * bar and the navigation bar — while the *content* is inset to the safe area.
+ * That is the point of drawing edge to edge: the background reaches the edges
+ * so there are no dead grey strips, but nothing readable or tappable ever sits
+ * under a system bar.
  */
 @Composable
 fun PopScreen(
@@ -81,6 +90,11 @@ fun PopScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                // Insets before the scroll, so the scrollable region itself
+                // stops short of the bars rather than sliding content beneath
+                // them. `safeDrawing` also covers display cutouts and the
+                // keyboard, which matters on the sign-in screen.
+                .windowInsetsPadding(WindowInsets.safeDrawing)
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp, vertical = 24.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),

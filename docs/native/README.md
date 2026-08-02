@@ -29,16 +29,17 @@ Part 1 is under way. What is written and tested in the repo today:
 | §1.9 Difficulty-weighted rewards | ✅ `difficulty.ts`, wired through `questions.ts` and `finishRun` |
 | §1.6 Entitlement model | ✅ `entitlement.ts`, migration `0004` |
 | §1.10 Gate enforcement | ✅ `run-start` refuses locked modes and unentitled tables; `run-finish` re-checks |
-| §1.1 Edge Functions | ⚠️ `run-start`, `run-finish`, `modes`, `mastery` live. Rules reach Deno via `npm run edge:sync` |
+| §1.1 Edge Functions | ⚠️ `run-start`, `run-finish`, `modes`, `mastery`, `house` live. Rules reach Deno via `npm run edge:sync` |
 | §1.2 Web app onto the API | ⬜ **Not started — two write paths exist right now** |
 | §1.3 Board delivery | ⚠️ Done for question modes (`pending_runs`). Puzzle boards still to come |
 | §1.4 Auth / JWT student claim | ⬜ Not started |
 | §2.1–2.2 Android project + modules | ✅ Gradle 8.11.1, AGP 8.7.3, Kotlin 2.1, compileSdk 35 |
 | §2.3 Toolbox Pop in Compose | ✅ Primitives, hard shadows, Titan One / Nunito / Space Mono bundled |
 | §2.4 Navigation | ✅ Type-safe routes, session-gated: sign-in → picker → hub |
-| §2.5 Screens | ⚠️ Sign-in, picker, hub, runner, results, mastery grid. ~34 to go |
+| §2.5 Screens | ⚠️ Sign-in, picker, hub, runner, results, grid, house, settings. ~32 to go |
 | §2.6 The five game modes | ⬜ Blocked on §1.3 |
-| §2.7–2.9 Accessibility, offline, billing | ⬜ Not started |
+| §2.7 Accessibility | ⚠️ Reduced motion, text scale, timer mode work. Read-aloud, high contrast, dyslexic font not built |
+| §2.8–2.9 Offline, billing | ⬜ Not started |
 | Part 3 iOS | ⬜ Not started |
 
 The Android app signs in, reads real data over RLS, is handed a run by the

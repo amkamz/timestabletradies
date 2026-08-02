@@ -48,3 +48,6 @@ next-env.d.ts
 
 # Keep the template, ignore the real one.
 !.env.example
+
+# Supabase CLI scratch
+supabase/.temp/

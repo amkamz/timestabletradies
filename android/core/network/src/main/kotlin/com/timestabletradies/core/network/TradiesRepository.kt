@@ -134,6 +134,14 @@ class TradiesRepository(private val client: SupabaseClient) {
             }
             .body()
 
+    /** The house build: stage, loads, and the rare items won so far. */
+    suspend fun house(studentId: String): HouseState =
+        client.functions
+            .invoke("house?studentId=$studentId") {
+                method = HttpMethod.Get
+            }
+            .body()
+
     /* ---------------------------------------------------------------- runs */
 
     /**

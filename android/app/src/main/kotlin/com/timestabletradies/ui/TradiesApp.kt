@@ -108,6 +108,9 @@ data object ResultsRoute
 @Serializable
 data object MasteryRoute
 
+@Serializable
+data object HouseRoute
+
 /**
  * The nav host, and the gate.
  *
@@ -224,6 +227,7 @@ fun TradiesApp() {
                     navController.navigate(RunRoute(mode.key, mode.name))
                 },
                 onOpenGrid = { navController.navigate(MasteryRoute) },
+                onOpenHouse = { navController.navigate(HouseRoute) },
                 onSwitchStudent = {
                     activeStudent = null
                     navController.navigate(PickerRoute) {
@@ -302,6 +306,19 @@ fun TradiesApp() {
                 LaunchedEffect(Unit) { navController.popBackStack() }
             } else {
                 MasteryScreen(
+                    repository = repository,
+                    studentId = student.id,
+                    onBack = { navController.popBackStack() },
+                )
+            }
+        }
+
+        composable<HouseRoute> {
+            val student = activeStudent
+            if (student == null) {
+                LaunchedEffect(Unit) { navController.popBackStack() }
+            } else {
+                HouseScreen(
                     repository = repository,
                     studentId = student.id,
                     onBack = { navController.popBackStack() },

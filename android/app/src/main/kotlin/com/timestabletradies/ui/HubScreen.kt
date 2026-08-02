@@ -67,6 +67,7 @@ fun HubScreen(
     state: HubState? = null,
     onPlay: (PracticeMode) -> Unit = {},
     onOpenGrid: () -> Unit = {},
+    onOpenHouse: () -> Unit = {},
     onSwitchStudent: () -> Unit = {},
 ) {
     PopScreen(
@@ -128,6 +129,23 @@ fun HubScreen(
                     size = PopSize.Small,
                 )
             }
+        }
+
+        Spacer(Modifier.height(8.dp))
+        Text("Your build", style = PopType.DisplayMedium, color = PopTokens.Ink)
+        PopCard(modifier = Modifier.fillMaxWidth(), fill = PopTokens.SandPanel) {
+            Text(
+                "Materials go into the house.",
+                style = PopType.Body,
+                color = PopTokens.Ink,
+            )
+            Spacer(Modifier.height(10.dp))
+            PopButton(
+                text = "See the build",
+                onClick = onOpenHouse,
+                tone = PopTone.Yellow,
+                size = PopSize.Small,
+            )
         }
 
         Spacer(Modifier.height(8.dp))

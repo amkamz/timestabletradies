@@ -68,6 +68,7 @@ fun HubScreen(
     onPlay: (PracticeMode) -> Unit = {},
     onOpenGrid: () -> Unit = {},
     onOpenHouse: () -> Unit = {},
+    onOpenSettings: () -> Unit = {},
     onSwitchStudent: () -> Unit = {},
 ) {
     PopScreen(
@@ -149,12 +150,20 @@ fun HubScreen(
         }
 
         Spacer(Modifier.height(8.dp))
-        PopButton(
-            text = "Switch tradie",
-            onClick = onSwitchStudent,
-            tone = PopTone.White,
-            size = PopSize.Small,
-        )
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            PopButton(
+                text = "Settings",
+                onClick = onOpenSettings,
+                tone = PopTone.White,
+                size = PopSize.Small,
+            )
+            PopButton(
+                text = "Switch tradie",
+                onClick = onSwitchStudent,
+                tone = PopTone.White,
+                size = PopSize.Small,
+            )
+        }
 
         Spacer(Modifier.height(24.dp))
     }

@@ -12,6 +12,8 @@ import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
@@ -168,9 +170,18 @@ fun PopTheme(
 
     val motionOff = reducedMotion || systemReducedMotion()
 
+    // Applied by scaling the density's fontScale, which multiplies on top of
+    // whatever the phone is already set to rather than replacing it. A child
+    // who enlarged text system-wide keeps that and gets this as well.
+    val density = LocalDensity.current
+    val scaled = remember(density, textScale) {
+        Density(density.density, density.fontScale * textScale)
+    }
+
     CompositionLocalProvider(
         LocalPopReducedMotion provides motionOff,
         LocalPopTextScale provides textScale,
+        LocalDensity provides scaled,
     ) {
         MaterialTheme(
             colorScheme = PopColorScheme,

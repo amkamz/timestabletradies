@@ -111,6 +111,9 @@ data object MasteryRoute
 @Serializable
 data object HouseRoute
 
+@Serializable
+data object SettingsRoute
+
 /**
  * The nav host, and the gate.
  *
@@ -120,7 +123,9 @@ data object HouseRoute
  * then is the play area reachable.
  */
 @Composable
-fun TradiesApp() {
+fun TradiesApp(
+    onPreferences: (reducedMotion: Boolean, textScale: Float) -> Unit = { _, _ -> },
+) {
     val context = LocalContext.current
     val repository = remember { Graph.repository(context) }
     val navController: NavHostController = rememberNavController()
@@ -132,6 +137,9 @@ fun TradiesApp() {
     var activeStudent by remember { mutableStateOf<StudentDto?>(null) }
     var lastSummary by remember { mutableStateOf<RunSummary?>(null) }
     var hubState by remember { mutableStateOf<HubState?>(null) }
+    // Applied by PopTheme in MainActivity via these hoisted values.
+    var reducedMotion by remember { mutableStateOf(false) }
+    var textScale by remember { mutableStateOf(1f) }
 
     // Restore the persisted session *before* deciding where to start.
     //
@@ -142,6 +150,11 @@ fun TradiesApp() {
     LaunchedEffect(Unit) {
         repository.awaitSessionRestore()
         startRoute = if (repository.currentUserId() != null) PickerRoute else SignInRoute
+    }
+
+    // Hand the theme its inputs whenever they change.
+    LaunchedEffect(reducedMotion, textScale) {
+        onPreferences(reducedMotion, textScale)
     }
 
     val start = startRoute ?: return
@@ -165,6 +178,12 @@ fun TradiesApp() {
                 onPicked = { student ->
                     activeStudent = student
                     hubState = null
+                    scope.launch {
+                        runCatching { repository.settings(student.id) }.onSuccess {
+                            reducedMotion = it.reducedMotion
+                            textScale = it.textScale.toFloat()
+                        }
+                    }
                     navController.navigate(HubRoute)
                 },
                 onSignOut = {
@@ -228,6 +247,7 @@ fun TradiesApp() {
                 },
                 onOpenGrid = { navController.navigate(MasteryRoute) },
                 onOpenHouse = { navController.navigate(HouseRoute) },
+                onOpenSettings = { navController.navigate(SettingsRoute) },
                 onSwitchStudent = {
                     activeStudent = null
                     navController.navigate(PickerRoute) {
@@ -321,6 +341,25 @@ fun TradiesApp() {
                 HouseScreen(
                     repository = repository,
                     studentId = student.id,
+                    onBack = { navController.popBackStack() },
+                )
+            }
+        }
+
+        composable<SettingsRoute> {
+            val student = activeStudent
+            if (student == null) {
+                LaunchedEffect(Unit) { navController.popBackStack() }
+            } else {
+                SettingsScreen(
+                    repository = repository,
+                    studentId = student.id,
+                    onChanged = {
+                        // Applied immediately rather than on the next launch —
+                        // a child turning motion down wants it to stop now.
+                        reducedMotion = it.reducedMotion
+                        textScale = it.textScale.toFloat()
+                    },
                     onBack = { navController.popBackStack() },
                 )
             }

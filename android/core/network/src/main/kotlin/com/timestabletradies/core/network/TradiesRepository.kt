@@ -142,6 +142,30 @@ class TradiesRepository(private val client: SupabaseClient) {
             }
             .body()
 
+    /* ------------------------------------------------------------ settings */
+
+    /**
+     * Accessibility preferences, or the defaults when none are saved.
+     *
+     * Straight to Postgres: these are preferences, not rules, and there is
+     * nothing here a client gains by lying about.
+     */
+    suspend fun settings(studentId: String): StudentSettings =
+        client.from("student_settings")
+            .select {
+                filter { eq("student_id", studentId) }
+            }
+            .decodeSingleOrNull<StudentSettings>()
+            ?: StudentSettings(studentId = studentId)
+
+    suspend fun saveSettings(settings: StudentSettings) {
+        client.from("student_settings").upsert(settings) {
+            // One row per student, so a repeat save updates rather than
+            // colliding on the primary key.
+            onConflict = "student_id"
+        }
+    }
+
     /* ---------------------------------------------------------------- runs */
 
     /**

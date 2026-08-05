@@ -7,6 +7,7 @@ import { BottomNav } from "@/components/shell/nav";
 import { requireActiveStudent } from "@/lib/data/session";
 import { getCosmetics } from "@/lib/data/student";
 import { SHOP_CATEGORIES, SHOP_ITEMS, type ShopCategory } from "@/lib/game/shop";
+import { levelFromXp } from "@/lib/game/city-level";
 
 /**
  * F1 · Cosmetics Shop.
@@ -47,8 +48,8 @@ export default async function ShopPage() {
               <ul className="mt-2 grid grid-cols-2 gap-2">
                 {items.map((item) => {
                   const isOwned = ownedKeys.has(item.key);
-                  const lockedByRank = Boolean(
-                    item.requiresRank && student.rank_rung < item.requiresRank,
+                  const lockedByLevel = Boolean(
+                    item.requiresLevel && levelFromXp(student.city_xp).level < item.requiresLevel,
                   );
                   const affordable = student.coins >= item.coins;
 
@@ -58,7 +59,7 @@ export default async function ShopPage() {
                         <PopCard
                           className={cx(
                             "flex h-full flex-col gap-1.5 p-2.5",
-                            lockedByRank && "opacity-60",
+                            lockedByLevel && "opacity-60",
                           )}
                         >
                           <span
@@ -76,9 +77,9 @@ export default async function ShopPage() {
                             <span className="font-sans text-[10px] font-black text-teal">
                               IN YOUR LOCKER
                             </span>
-                          ) : lockedByRank ? (
+                          ) : lockedByLevel ? (
                             <span className="font-sans text-[10px] font-black text-sand">
-                              RANK {item.requiresRank}
+                              LEVEL {item.requiresLevel}
                             </span>
                           ) : (
                             <span

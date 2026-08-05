@@ -9,7 +9,7 @@ import com.timestabletradies.core.designsystem.PopTokens
  * Three different things live here and they are worth telling apart:
  *
  * 1. **Mirrors of `lib/game`** — the trade zones, the name pools, the character
- *    options, the shop catalogue and the rank ladder. These are real product
+ *    options and the shop catalogue. These are real product
  *    data that happens to live in TypeScript today. Duplicating them is the
  *    same compromise `PopTokens` already makes, and it carries the same rule:
  *    **do not tune a value here** — change it in `lib/game` and bring it
@@ -93,32 +93,20 @@ object Storyboard {
         "Ironside", "Steelworth", "Woodward", "Stoneham", "Bricklow",
     )
 
-    /* --------------------------------------- mirrors of lib/game/progression.ts */
-
-    /** `TRADE_RANKS`, rung 1 first. Ten rungs, and the ladder never goes down. */
-    val rankLadder = listOf(
-        "First-Year Apprentice",
-        "Second-Year Apprentice",
-        "Third-Year Apprentice",
-        "Fourth-Year Apprentice",
-        "Qualified Tradie",
-        "Leading Hand",
-        "Foreman",
-        "Site Supervisor",
-        "Master Tradie",
-        "Legend of the Trade",
-    )
-
     /* --------------------------------------------- mirrors of lib/game/shop.ts */
 
     /**
      * `SHOP_ITEMS`, grouped the way the storyboard groups them.
      *
      * The catalogue's own categories are hats / vests / belts / utes /
-     * accessories; the storyboard's tabs are HATS / VESTS / TOOLS / RIDES.
-     * Belts are the tools tab and utes are the rides tab — the same items under
-     * the labels a child reads, with accessories folded into TOOLS rather than
-     * inventing a fifth tab the design doesn't have.
+     * accessories; the tabs are HATS / VESTS / TOOLS / RIDES / EXTRAS. Belts
+     * are the tools tab and utes are the rides tab — the same items under the
+     * labels a child reads.
+     *
+     * Accessories used to be folded into TOOLS because the storyboard drew four
+     * tabs. Only four of the seven fitted, so three were unreachable and none
+     * could be equipped — the locker slot they map to did not exist either.
+     * EXTRAS is the fifth tab, and every item in `shop.ts` now has a home.
      */
     val shopItems: List<ShopItem> = listOf(
         ShopItem("hat-classic-white", "Classic White", ShopCategory.Hats, 0, owned = true),
@@ -143,10 +131,6 @@ object Storyboard {
         ShopItem("belt-red-handles", "Red-Handled Set", ShopCategory.Tools, 340),
         ShopItem("belt-titanium", "Titanium Set", ShopCategory.Tools, 780),
         ShopItem("belt-glow", "Glow Grips", ShopCategory.Tools, 950),
-        ShopItem("acc-sunnies", "Site Sunnies", ShopCategory.Tools, 90),
-        ShopItem("acc-gloves", "Grip Gloves", ShopCategory.Tools, 110),
-        ShopItem("acc-boots", "Steel Caps", ShopCategory.Tools, 160),
-        ShopItem("acc-earmuffs", "Ear Muffs", ShopCategory.Tools, 140),
 
         ShopItem("ute-white", "Site White", ShopCategory.Rides, 500),
         ShopItem("ute-yellow", "Hi-Vis Yellow", ShopCategory.Rides, 700),
@@ -382,6 +366,3 @@ object Storyboard {
     }
 }
 
-/** Name for a rung of the ladder, clamped like `rankName` in `progression.ts`. */
-fun rankNameFor(rung: Int): String =
-    Storyboard.rankLadder.getOrElse(rung - 1) { Storyboard.rankLadder.last() }

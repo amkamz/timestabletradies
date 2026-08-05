@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { requireParent } from "./auth";
 import { canPurchase, findItem } from "@/lib/game/shop";
+import { levelFromXp } from "@/lib/game/city-level";
 import { createClient } from "@/lib/supabase/server";
 
 export type ShopResult = { ok: boolean; message?: string };
@@ -21,7 +22,7 @@ export async function purchaseItem(studentId: string, itemKey: string): Promise<
   if (!item) return { ok: false, message: "That item isn't in the shop." };
 
   const [{ data: student }, { data: owned }] = await Promise.all([
-    supabase.from("students").select("coins, rank_rung").eq("id", studentId).single(),
+    supabase.from("students").select("coins, city_xp").eq("id", studentId).single(),
     supabase.from("student_cosmetics").select("item_key").eq("student_id", studentId),
   ]);
 
@@ -29,7 +30,7 @@ export async function purchaseItem(studentId: string, itemKey: string): Promise<
 
   const check = canPurchase(item, {
     coins: student.coins,
-    rank: student.rank_rung,
+    level: levelFromXp(student.city_xp).level,
     owned: (owned ?? []).map((o) => o.item_key),
   });
   if (!check.ok) return { ok: false, message: check.message };

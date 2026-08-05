@@ -34,12 +34,12 @@ import com.timestabletradies.ui.RunSummary
  * B9 · Job complete.
  *
  * Everything on this screen is the server's verdict, not the client's —
- * `run-finish` recomputed coins, materials, mastery and rank from the answer
+ * `run-finish` recomputed coins, materials, mastery and city XP from the answer
  * log, and this displays what came back (§0.2).
  *
  * The order is deliberate. Coins first because that is what a child came for,
- * then anything that only happens rarely — a promotion, division opening, a
- * house stage finishing — and the accuracy figures last. Burying a rank-up
+ * then anything that only happens rarely — a level up, a streak milestone,
+ * division opening — and the accuracy figures last. Burying a level-up
  * under a stats table wastes the one moment in a session worth stopping for.
  */
 @Composable
@@ -111,22 +111,61 @@ fun JobResultsScreen(
                 }
 
                 // The rare moments, given room rather than a line in a table.
-                if (summary.newRank != null) {
+                if (summary.newCityLevel != null) {
                     PopCard(
                         modifier = Modifier.fillMaxWidth(),
                         fill = PopTokens.Red,
                     ) {
                         Text(
-                            "PROMOTED!",
+                            "LEVEL UP!",
                             style = PopType.DisplayMedium,
                             color = PopTokens.White,
                             textAlign = TextAlign.Center,
                             modifier = Modifier.fillMaxWidth(),
                         )
                         Text(
-                            summary.newRank,
+                            "Sparky's City reached level ${summary.newCityLevel}",
                             style = PopType.Body,
                             color = PopTokens.RedTint,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                }
+
+                if (summary.streakPointsAwarded > 0) {
+                    PopCard(
+                        modifier = Modifier.fillMaxWidth(),
+                        fill = PopTokens.Yellow,
+                    ) {
+                        Text(
+                            "TEN DAYS ON THE TROT",
+                            style = PopType.Title,
+                            color = PopTokens.Ink,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        Text(
+                            "${summary.streakPointsAwarded} streak point" +
+                                if (summary.streakPointsAwarded == 1) " banked" else "s banked",
+                            style = PopType.Small,
+                            color = PopTokens.YellowDeep,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                }
+
+                if (summary.streakTiersLost > 0) {
+                    // Said plainly and without scolding. A missed day costs a
+                    // step off the rate, never the points already earned, and a
+                    // child told that clearly is likelier to come back tomorrow.
+                    PopCard(modifier = Modifier.fillMaxWidth()) {
+                        Text(
+                            "Your streak dropped a step while you were away — " +
+                                "the points you earned are safe.",
+                            style = PopType.Small,
+                            color = PopTokens.Mud,
                             textAlign = TextAlign.Center,
                             modifier = Modifier.fillMaxWidth(),
                         )

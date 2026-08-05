@@ -35,7 +35,9 @@ import {
 import { countsForSpeed } from "../_shared/game/modes.ts";
 import { applyDailyCap } from "../_shared/game/economy.ts";
 import { playableTables, type Entitlement } from "../_shared/game/entitlement.ts";
-import { bankMaterials, rankFromYardResult } from "../_shared/game/progression.ts";
+import { bankMaterials } from "../_shared/game/progression.ts";
+import { levelFromXp, levelsGained, xpForRun } from "../_shared/game/city-level.ts";
+import { recordPlay } from "../_shared/game/streak.ts";
 import type { RunMode } from "../_shared/game/supabase-types.ts";
 
 /**
@@ -145,7 +147,10 @@ Deno.serve(async (req) => {
 
   const { data: student } = await supabase
     .from("students")
-    .select("id, family_id, coins, rank_rung, house_stage, house_loads")
+    .select(
+      "id, family_id, coins, city_xp, house_stage, house_loads, " +
+        "streak_tier, streak_points, streak_days_into_block, streak_last_played_on",
+    )
     .eq("id", pending.student_id)
     .maybeSingle();
 
@@ -344,18 +349,25 @@ Deno.serve(async (req) => {
 
   /* ---- progression ------------------------------------------------------- */
 
-  // The Yard is the only thing that sets Trade Rank, and it never demotes.
-  // A rank that can fall is a rank nothing can be gated on — see the note in
-  // `modes.ts` about why unlocks key off zones instead.
-  let newRank: number | undefined;
-  if (mode === "yard") {
-    const rung = rankFromYardResult({
-      accuracy: scored.accuracy,
-      avgMs: scored.avgMs,
-      questions: entitled.length,
-    });
-    if (rung > student.rank_rung) newRank = rung;
-  }
+  // City level replaced Trade Rank outright. Rank was recomputed from a single
+  // Yard round and could fall, so nothing could be gated on it; XP only
+  // accumulates. Correct answers only — XP is for work done — and daily jobs
+  // pay the full rate while games pay less, so a game is never worth more than
+  // the work.
+  const xpEarned = xpForRun(mode, scored.correct);
+  const newXp = student.city_xp + xpEarned;
+
+  // One play per day, however many runs it took. This fires per finished run,
+  // and `recordPlay` is idempotent within a date for exactly that reason.
+  const streak = recordPlay(
+    {
+      tier: student.streak_tier,
+      points: student.streak_points,
+      daysIntoBlock: student.streak_days_into_block,
+      lastPlayedOn: student.streak_last_played_on,
+    },
+    new Date().toISOString().slice(0, 10),
+  );
 
   // Multiplication-first: a full multiplication round on a table opens
   // division for that table (spec §4).
@@ -395,14 +407,24 @@ Deno.serve(async (req) => {
     .from("students")
     .update({
       coins: student.coins + capped.coins,
+      city_xp: newXp,
       house_stage: house.stageIndex,
       house_loads: house.loads,
-      ...(newRank ? { rank_rung: newRank } : {}),
+      streak_tier: streak.state.tier,
+      streak_points: streak.state.points,
+      streak_days_into_block: streak.state.daysIntoBlock,
+      streak_last_played_on: streak.state.lastPlayedOn,
     })
     .eq("id", student.id);
 
   return json({
-    newRank,
+    xpEarned,
+    cityLevel: levelFromXp(newXp).level,
+    levelsGained: levelsGained(student.city_xp, newXp),
+    streakTier: streak.state.tier,
+    streakPoints: streak.state.points,
+    streakPointsAwarded: streak.pointsAwarded,
+    streakTiersLost: streak.tiersLost,
     divisionUnlockedFor,
     runId: run.id,
     correct: scored.correct,

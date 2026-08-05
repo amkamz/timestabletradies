@@ -69,7 +69,14 @@ export type StudentRow = {
   look_skin: string;
   look_hair: string;
   coins: number;
+  /** @deprecated Trade Rank was replaced by `city_xp`. Kept as history. */
   rank_rung: number;
+  /** City level is derived from this, never stored — see `city-level.ts`. */
+  city_xp: number;
+  streak_tier: number;
+  streak_points: number;
+  streak_days_into_block: number;
+  streak_last_played_on: string | null;
   house_stage: number;
   house_loads: number;
   onboarded_at: string | null;
@@ -235,7 +242,7 @@ export type CrewRosterRow = {
   look_model: number;
   look_skin: string;
   look_hair: string;
-  rank_rung: number;
+  city_xp: number;
 };
 
 export type Database = {

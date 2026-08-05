@@ -4,7 +4,7 @@ import { InvitePanel } from "@/components/dashboard/invite-panel";
 import { requireParent } from "@/lib/actions/auth";
 import { removeStudent } from "@/lib/actions/onboarding";
 import { FAMILY_LIMITS } from "@/lib/game/billing";
-import { rankName } from "@/lib/game/progression";
+import { levelLabel } from "@/lib/game/city-level";
 import { createClient } from "@/lib/supabase/server";
 
 /** H5 · Family & profiles — plus H7, grandparent invites. */
@@ -43,7 +43,7 @@ export default async function FamilyPage() {
               <div className="flex-1">
                 <p className="font-display text-base text-ink">{student.display_name}</p>
                 <p className="font-sans text-[11px] font-black text-red uppercase">
-                  {rankName(student.rank_rung)}
+                  {levelLabel(student.city_xp)}
                 </p>
                 <p className="font-sans text-[11px] font-bold text-mud">
                   {[student.age ? `Age ${student.age}` : null, student.year_level]

@@ -33,8 +33,8 @@ Part 1 is under way. What is written and tested in the repo today:
 |---|---|
 | §1.7 ×1 tutorial zone | ✅ `zones.ts`, migration `0003` |
 | §1.8 Mode unlocks | ✅ `modes.ts` — `MODE_REQUIREMENTS`, `modeAvailability`, and the rescope's cut applied: `RETIRED_MODES`, `ModeSection`, `practiceModesBySection` |
-| Streak tiers and points | ✅ `streak.ts` — tier 0–10 as the earn rate, points as the balance. Needs a schema column before it can be stored |
-| City level and XP | ✅ `city-level.ts` — replaces the house percentage and Trade Rank. Needs a schema column, and the UI still shows rank |
+| Streak tiers and points | ✅ `streak.ts`, migration `20260805`, banked by both copies of `finishRun` |
+| City level and XP | ✅ `city-level.ts`, migration `20260805`. **Trade Rank is gone** — removed from `progression.ts`, both write paths, all nine display sites, the shop gate (`requiresLevel`) and the Android ladder screen. `students.rank_rung` survives as history and nothing reads it |
 | §1.9 Difficulty-weighted rewards | ✅ `difficulty.ts`, wired through `questions.ts` and `finishRun` |
 | §1.6 Entitlement model | ✅ `entitlement.ts`, migration `0004` |
 | §1.10 Gate enforcement | ✅ `run-start` refuses locked modes and unentitled tables; `run-finish` re-checks |

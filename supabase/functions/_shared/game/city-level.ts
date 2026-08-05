@@ -110,3 +110,46 @@ export function xpToCompleteLevel(totalXp: number): number {
 export function levelsGained(beforeXp: number, afterXp: number): number {
   return Math.max(0, levelFromXp(afterXp).level - levelFromXp(beforeXp).level);
 }
+
+/**
+ * The badge under a tradie's name, where the Trade Rank title used to sit.
+ *
+ * A number rather than a title on purpose. "Third-Year Apprentice" and
+ * "Leading Hand" told a child nothing about which was further along, and there
+ * were ten of them to learn before the ladder made any sense at all.
+ */
+export function levelLabel(totalXp: number): string {
+  return `Level ${levelFromXp(totalXp).level}`;
+}
+
+/* ------------------------------------------------------------ earning XP */
+
+export const XP_PER_CORRECT = 4;
+
+/**
+ * How much of the full rate a mode pays.
+ *
+ * Daily jobs are the engine and pay in full. Practice and games pay less, per
+ * the rule that a game should not be worth more than the work — they still
+ * count toward mastery and are still measured, they just don't build the city
+ * as fast. This is the lever that keeps the daily board worth opening.
+ */
+export function modeXpWeight(mode: string): number {
+  switch (mode) {
+    case "job":
+      return 1;
+    case "garage":
+    case "toolbox":
+      return 0.5;
+    default:
+      return 0.4;
+  }
+}
+
+/**
+ * XP for a finished run. Correct answers only — XP is for work done, and a
+ * wrong answer is practice rather than progress.
+ */
+export function xpForRun(mode: string, correct: number): number {
+  return Math.round(Math.max(0, correct) * XP_PER_CORRECT * modeXpWeight(mode));
+}

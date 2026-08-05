@@ -17,7 +17,7 @@ export default async function CrewRacePage() {
   const [{ unlocked, divisionUnlocked }, assignment, { data: crew }] = await Promise.all([
     getUnlockState(student.id),
     getAssignment(student.id),
-    supabase.from("crew_roster").select("id, display_name, rank_rung"),
+    supabase.from("crew_roster").select("id, display_name, city_xp"),
   ]);
 
   const tables =

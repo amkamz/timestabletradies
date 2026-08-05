@@ -7,7 +7,7 @@ import { BottomNav } from "@/components/shell/nav";
 import { requireActiveStudent } from "@/lib/data/session";
 import { getCosmetics } from "@/lib/data/student";
 import { formatTradieName } from "@/lib/game/names";
-import { rankName } from "@/lib/game/progression";
+import { levelLabel } from "@/lib/game/city-level";
 
 import { LockerGrid } from "./locker-grid";
 
@@ -45,7 +45,7 @@ export default async function LockerPage() {
           <span>
             <span className="block font-display text-sm text-ink">{tradieName}</span>
             <span className="block font-sans text-[11px] font-black text-red uppercase">
-              {rankName(student.rank_rung)}
+              {levelLabel(student.city_xp)}
             </span>
             <span className="block font-sans text-[10.5px] font-bold text-mud">
               {owned.length} item{owned.length === 1 ? "" : "s"} collected

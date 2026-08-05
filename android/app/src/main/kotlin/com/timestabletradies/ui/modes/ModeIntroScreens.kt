@@ -144,18 +144,27 @@ fun GarageScreen(
 }
 
 /**
- * C4 · The Yard → Trade Rank.
+ * C4 · The Yard — the speed test.
  *
- * Ten rungs, and **the ladder shown here is the high-water mark, not the last
- * result.** `rankFromYardResult` recomputes rank from a single speed test and
- * can come back lower than last time; a rung that disappears after one bad run
- * reads to a seven-year-old as punishment, and anything gated on rank reads the
- * peak for the same reason (§1.8).
+ * **The ten-rung Trade Rank ladder that used to be this screen is gone.** Rank
+ * was recomputed from a single speed test and could come back *lower* than last
+ * time, so a child could take one slow turn on a tired afternoon and watch
+ * themselves demoted from Foreman to Leading Hand. That is a cruel thing to do
+ * over twenty questions, and it made the rank useless as a gate besides —
+ * anything keyed to it could vanish.
+ *
+ * City level replaced it, and city level is earned by turning up rather than by
+ * being quick. So the Yard hands back nothing but the run: no title, no rung,
+ * nothing to lose. Every answer still counts toward the mastery grid, which is
+ * what makes a fast round worth taking at all.
+ *
+ * This screen becomes the countdown game when that is built — ten seconds a
+ * question, dropping a tenth each time, chasing a high score. A number that
+ * goes up beats a title that can come down.
  */
 @Composable
-fun TradeRankScreen(
-    currentRung: Int,
-    justRankedUp: Boolean,
+fun TheYardScreen(
+    cityLevel: Int,
     onRunTheYard: () -> Unit,
     onBack: () -> Unit,
 ) {
@@ -174,40 +183,44 @@ fun TradeRankScreen(
                 modifier = Modifier.semantics { contentDescription = "Back to the shed" },
             )
             PopBanner(
-                text = "TRADE RANK",
+                text = "THE YARD",
                 fill = PopTokens.Ink,
                 content = PopTokens.Yellow,
             )
         }
 
-        if (justRankedUp) {
-            PopCard(
-                modifier = Modifier.fillMaxWidth(),
-                fill = PopTokens.Yellow,
-            ) {
-                Text("YOU JUST RANKED UP TO", style = PopType.Small, color = PopTokens.YellowDeep)
-                Text(
-                    text = Storyboard.rankLadder.getOrElse(currentRung - 1) { "" },
-                    style = PopType.DisplayMedium,
-                    color = PopTokens.Ink,
-                )
-                Text(
-                    "Rung $currentRung of ${Storyboard.rankLadder.size}",
-                    style = PopType.Small,
-                    color = PopTokens.YellowDeep,
-                )
-            }
+        PopCard(
+            modifier = Modifier.fillMaxWidth(),
+            fill = PopTokens.Yellow,
+        ) {
+            Text("SPARKY'S CITY", style = PopType.Small, color = PopTokens.YellowDeep)
+            Text(
+                text = "Level $cityLevel",
+                style = PopType.DisplayMedium,
+                color = PopTokens.Ink,
+            )
+            Text(
+                "Built by turning up, not by going fast",
+                style = PopType.Small,
+                color = PopTokens.YellowDeep,
+            )
         }
 
-        // Top rung first: the ladder is something to climb, and drawing it
-        // upside down would put the goal at the bottom of a scroll.
-        Storyboard.rankLadder.indices.reversed().forEach { index ->
-            val rung = index + 1
-            RankRow(
-                rung = rung,
-                name = Storyboard.rankLadder[index],
-                current = rung == currentRung,
-                top = rung == Storyboard.rankLadder.size,
+        PopCard(modifier = Modifier.fillMaxWidth()) {
+            Text("How fast can you go?", style = PopType.Title, color = PopTokens.Ink)
+            PopGap(6.dp)
+            Text(
+                text = "Twenty questions from every table you've opened, ten " +
+                    "seconds each. Nothing to lose — it's just you against the clock.",
+                style = PopType.Small,
+                color = PopTokens.Mud,
+            )
+            PopGap(10.dp)
+            Text(
+                text = "Every answer still counts toward your mastery grid, so a " +
+                    "fast round is never a wasted one.",
+                style = PopType.Small,
+                color = PopTokens.Mud,
             )
         }
 
@@ -218,51 +231,12 @@ fun TradeRankScreen(
             onClick = onRunTheYard,
             tone = PopTone.Teal,
             size = PopSize.Large,
-            sub = "A speed test sets your rank",
+            sub = "Twenty questions, ten seconds each",
             fullWidth = true,
             shadow = PopShadow.Large,
         )
 
         PopGap(20.dp)
-    }
-}
-
-@Composable
-private fun RankRow(rung: Int, name: String, current: Boolean, top: Boolean) {
-    val fill = when {
-        current -> PopTokens.Teal
-        top -> PopTokens.Ink
-        else -> PopTokens.White
-    }
-    val numberColor = when {
-        current -> PopTokens.White
-        top -> PopTokens.Yellow
-        else -> PopTokens.Sand
-    }
-    val nameColor = when {
-        current -> PopTokens.White
-        top -> PopTokens.White
-        else -> PopTokens.Mud
-    }
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(fill, RoundedCornerShape(PopTokens.RadiusSm))
-            .padding(horizontal = 14.dp, vertical = 10.dp)
-            .semantics(mergeDescendants = true) {
-                contentDescription = if (current) {
-                    "Rung $rung, $name, you are here"
-                } else {
-                    "Rung $rung, $name"
-                }
-            },
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Text("$rung", style = PopType.Title, color = numberColor)
-        Text(name, style = PopType.Body, color = nameColor, modifier = Modifier.weight(1f))
-        if (current) Text("👷", style = PopType.Title)
     }
 }
 

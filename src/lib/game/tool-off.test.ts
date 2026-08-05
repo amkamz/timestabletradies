@@ -223,7 +223,7 @@ test("every rival is losable by a player who mostly misses", () => {
   }
 });
 
-test("the rival roster opens up with Trade Rank", () => {
+test("the rival roster opens up with city level", () => {
   assert.deepEqual(
     rivalsFor(1).map((r) => r.key),
     ["kade"],

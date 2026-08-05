@@ -4,7 +4,8 @@ import { Coin, PopCard, cx } from "@/components/ui/pop";
 import { MasteryGrid } from "@/components/mastery/grid";
 import { requireParent } from "@/lib/actions/auth";
 import { getMastery, getRecentRuns, getUnlockState, stagesFrom } from "@/lib/data/student";
-import { HOUSE_STAGES, rankName, stageAt, stageProgress } from "@/lib/game/progression";
+import { HOUSE_STAGES, stageAt, stageProgress } from "@/lib/game/progression";
+import { levelLabel } from "@/lib/game/city-level";
 import { createClient } from "@/lib/supabase/server";
 
 /** H1 · Dashboard home — one card per student. */
@@ -77,7 +78,7 @@ export default async function DashboardPage() {
                 <div>
                   <h2 className="font-display text-lg text-ink">{s.student.display_name}</h2>
                   <p className="font-sans text-[11px] font-black text-red uppercase">
-                    {rankName(s.student.rank_rung)}
+                    {levelLabel(s.student.city_xp)}
                   </p>
                 </div>
                 <p className="flex items-center gap-1.5">

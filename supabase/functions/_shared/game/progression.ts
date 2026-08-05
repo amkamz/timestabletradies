@@ -2,57 +2,17 @@
 // Source: src/lib/game/progression.ts
 // Regenerate with: npm run edge:sync
 /**
- * Trade Rank ladder (spec §6.1) and the House Project (spec §9).
+ * The House Project (spec §9) and the rare boss rewards on top of it.
+ *
+ * **Trade Rank used to live here and has been removed** — see
+ * `city-level.ts`, which replaced it. Rank was recomputed from a single Yard
+ * round and could go *down*, so nothing could safely be gated on it: a shop
+ * item or a rival that vanishes after one bad speed test reads to a child as
+ * punishment rather than as a bad round. City level only rises.
+ *
+ * `students.rank_rung` still exists in the schema as history. Nothing reads
+ * it.
  */
-
-/* ------------------------------------------------------------ trade rank */
-
-export const TRADE_RANKS = [
-  "First-Year Apprentice",
-  "Second-Year Apprentice",
-  "Third-Year Apprentice",
-  "Fourth-Year Apprentice",
-  "Qualified Tradie",
-  "Leading Hand",
-  "Foreman",
-  "Site Supervisor",
-  "Master Tradie",
-  "Legend of the Trade",
-] as const;
-
-export type TradeRank = (typeof TRADE_RANKS)[number];
-
-export function rankName(rung: number): TradeRank {
-  const i = Math.max(1, Math.min(TRADE_RANKS.length, rung)) - 1;
-  return TRADE_RANKS[i];
-}
-
-/**
- * The Yard evaluates overall speed across the player's unlocked range and
- * maps it onto the 10-rung ladder. Accuracy gates the rank — you can't be
- * fast and wrong and still rank up.
- */
-export function rankFromYardResult(input: {
-  accuracy: number;
-  avgMs: number;
-  questions: number;
-}): number {
-  if (input.questions < 10 || input.accuracy < 0.6) return 1;
-
-  // Speed bands, in milliseconds per question.
-  const bands = [6000, 5000, 4200, 3600, 3100, 2700, 2300, 2000, 1700];
-  let rung = 1;
-  for (const band of bands) {
-    if (input.avgMs <= band) rung += 1;
-  }
-
-  // Accuracy ceiling: a shaky round can't reach the top rungs.
-  if (input.accuracy < 0.75) rung = Math.min(rung, 3);
-  else if (input.accuracy < 0.85) rung = Math.min(rung, 5);
-  else if (input.accuracy < 0.95) rung = Math.min(rung, 8);
-
-  return Math.max(1, Math.min(TRADE_RANKS.length, rung));
-}
 
 /* --------------------------------------------------------- house project */
 

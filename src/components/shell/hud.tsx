@@ -1,6 +1,6 @@
 import { Brick, Coin, cx } from "@/components/ui/pop";
 import { hairHex, skinHex } from "@/lib/game/character";
-import { rankName } from "@/lib/game/progression";
+import { levelLabel } from "@/lib/game/city-level";
 import type { StudentRow } from "@/lib/supabase/types";
 
 /**
@@ -64,7 +64,7 @@ export function Hud({
         <span className="leading-tight">
           <span className="block font-display text-[13px] text-ink">{student.display_name}</span>
           <span className="block font-sans text-[9px] font-black text-red uppercase">
-            {rankName(student.rank_rung)}
+            {levelLabel(student.city_xp)}
           </span>
         </span>
       </div>

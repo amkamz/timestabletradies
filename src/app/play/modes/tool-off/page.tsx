@@ -5,6 +5,7 @@ import { requireActiveStudent } from "@/lib/data/session";
 import { getUnlockState } from "@/lib/data/student";
 import { newRunSeed } from "@/lib/game/seed";
 import { rivalsFor } from "@/lib/game/tool-off";
+import { levelFromXp } from "@/lib/game/city-level";
 
 /**
  * The Tool-Off — docs/game-modes/03-the-tool-off.md
@@ -25,7 +26,7 @@ export default async function ToolOffPage() {
       studentId={student.id}
       seed={newRunSeed(student.id, "tooloff")}
       unlocked={unlocked}
-      rivals={rivalsFor(student.rank_rung)}
+      rivals={rivalsFor(levelFromXp(student.city_xp).level)}
     />
   );
 }

@@ -25,8 +25,12 @@ sealed interface RunSummary {
         val coinsTotal: Int,
         val capped: Boolean,
         val housesCompleted: List<String>,
-        /** Set when The Yard pushed them up the ladder. */
-        val newRank: String? = null,
+        /** Set when this run pushed Sparky's City up a level. */
+        val newCityLevel: Int? = null,
+        /** Streak points banked, when this day completed a ten-day block. */
+        val streakPointsAwarded: Int = 0,
+        /** Tiers lost while they were away. Said gently, never scolded. */
+        val streakTiersLost: Int = 0,
         /** Set when a full multiplication round opened division for a table. */
         val divisionUnlockedFor: Int? = null,
     ) : RunSummary

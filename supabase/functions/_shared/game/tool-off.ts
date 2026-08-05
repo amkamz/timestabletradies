@@ -26,7 +26,7 @@ export type Rival = {
   name: string;
   blurb: string;
   /** Trade Rank rung this rival becomes available at. */
-  unlocksAtRank: number;
+  unlocksAtLevel: number;
   hp: number;
   /** The player's health in this fight — tuned per rival, not global. */
   playerHp: number;
@@ -50,7 +50,7 @@ export const RIVALS: Record<RivalKey, Rival> = {
     key: "kade",
     name: "Apprentice Kade",
     blurb: "First on the tools. Hits steady, never surprises you.",
-    unlocksAtRank: 1,
+    unlocksAtLevel: 1,
     hp: 120,
     playerHp: 200,
     hit: 12,
@@ -62,7 +62,7 @@ export const RIVALS: Record<RivalKey, Rival> = {
     key: "marlow",
     name: "Chippie Marlow",
     blurb: "Puts a shield up every third turn. Read it before you swing.",
-    unlocksAtRank: 3,
+    unlocksAtLevel: 3,
     hp: 160,
     playerHp: 200,
     hit: 15,
@@ -74,7 +74,7 @@ export const RIVALS: Record<RivalKey, Rival> = {
     key: "vance",
     name: "Sparky Vance",
     blurb: "Starts light, then doubles up. Punishes anyone who stalls.",
-    unlocksAtRank: 5,
+    unlocksAtLevel: 5,
     hp: 200,
     playerHp: 200,
     hit: 10,
@@ -86,7 +86,7 @@ export const RIVALS: Record<RivalKey, Rival> = {
     key: "dawes",
     name: "Foreman Dawes",
     blurb: "Shields every other turn, always on the table you like least.",
-    unlocksAtRank: 7,
+    unlocksAtLevel: 7,
     hp: 220,
     playerHp: 240,
     hit: 18,
@@ -99,7 +99,7 @@ export const RIVALS: Record<RivalKey, Rival> = {
 export const RIVAL_ORDER: readonly RivalKey[] = ["kade", "marlow", "vance", "dawes"];
 
 export function rivalsFor(rank: number): Rival[] {
-  return RIVAL_ORDER.map((key) => RIVALS[key]).filter((r) => rank >= r.unlocksAtRank);
+  return RIVAL_ORDER.map((key) => RIVALS[key]).filter((r) => rank >= r.unlocksAtLevel);
 }
 
 /* ------------------------------------------------------------------- belt */

@@ -10,8 +10,10 @@ import assert from "node:assert/strict";
 import {
   FIRST_LEVEL_XP,
   levelFromXp,
+  levelLabel,
   levelsGained,
   xpForLevel,
+  xpForRun,
   xpToCompleteLevel,
   xpToReachLevel,
 } from "./city-level";
@@ -95,4 +97,39 @@ test("levels never go backwards, even on a bad read", () => {
   // City level is the fix for Trade Rank being able to fall. If this can ever
   // report a negative, something downstream will show a child losing a level.
   assert.equal(levelsGained(1000, 0), 0);
+});
+
+/* ------------------------------------------------------------- earning XP */
+
+test("daily jobs pay the full rate and everything else pays less", () => {
+  // A game should never be worth more than the work. This is the lever that
+  // keeps the daily board worth opening.
+  const correct = 10;
+  const job = xpForRun("job", correct);
+  for (const mode of ["garage", "toolbox", "cablerun", "rally", "yard"]) {
+    assert.ok(xpForRun(mode, correct) < job, `${mode} should pay less than a job`);
+  }
+});
+
+test("only correct answers earn XP", () => {
+  assert.equal(xpForRun("job", 0), 0);
+  assert.equal(xpForRun("job", -5), 0, "a nonsense count cannot mint XP");
+  assert.ok(xpForRun("job", 10) > xpForRun("job", 5));
+});
+
+test("a first day of daily jobs reaches level 2 and starts on level 3", () => {
+  // Four daily jobs of ten questions, answered well. The tutorial boss then
+  // completes the level, and the child has seen a level-up inside one sitting.
+  const dayOne = 4 * xpForRun("job", 9);
+  const before = levelFromXp(dayOne);
+  assert.ok(before.level >= 2, `day one reached level ${before.level}`);
+
+  const afterBoss = levelFromXp(dayOne + xpToCompleteLevel(dayOne));
+  assert.equal(afterBoss.level, before.level + 1, "the boss lands a full level");
+});
+
+test("the badge is a number, not a title", () => {
+  // Ten rank titles told a child nothing about which was further along.
+  assert.equal(levelLabel(0), "Level 1");
+  assert.equal(levelLabel(xpToReachLevel(7)), "Level 7");
 });

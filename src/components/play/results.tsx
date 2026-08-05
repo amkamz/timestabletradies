@@ -2,7 +2,7 @@
 
 import { ArtSlot, Brick, Coin, PopButton, PopCard, PopLink } from "@/components/ui/pop";
 import { Screen, ScreenBody } from "@/components/shell/screen";
-import { rankName, stageAt, stageProgress } from "@/lib/game/progression";
+import { stageAt, stageProgress } from "@/lib/game/progression";
 import type { RunResult } from "@/lib/actions/play";
 
 /** B9 · Job complete — accuracy, average time, and what it earned. */
@@ -107,8 +107,25 @@ export function ResultsScreen({
               🎉 {s.name} is finished — on to the next stage!
             </Milestone>
           ))}
-          {result.newRank ? (
-            <Milestone tone="yellow">⬆ You ranked up to {rankName(result.newRank)}!</Milestone>
+          {result.levelsGained > 0 ? (
+            <Milestone tone="yellow">
+              ⬆ Sparky&apos;s City reached level {result.cityLevel}!
+            </Milestone>
+          ) : null}
+          {result.streakPointsAwarded > 0 ? (
+            <Milestone tone="yellow">
+              🔥 Ten days on the trot — {result.streakPointsAwarded} streak point
+              {result.streakPointsAwarded === 1 ? "" : "s"} banked.
+            </Milestone>
+          ) : null}
+          {result.streakTiersLost > 0 ? (
+            // Stated plainly and without scolding. A missed day costs one step
+            // off the rate, never the points already earned, and a child who is
+            // told that clearly is more likely to come back tomorrow.
+            <Milestone tone="teal">
+              Your streak dropped a step while you were away — the points you
+              earned are safe.
+            </Milestone>
           ) : null}
           {result.divisionUnlockedFor ? (
             <Milestone tone="teal">

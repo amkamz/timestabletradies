@@ -96,8 +96,14 @@ data class RunOutcome(
     val coinsTotal: Int,
     val houseStagesCompleted: List<String> = emptyList(),
     val rejected: Int = 0,
-    /** Set when The Yard pushed the student up the Trade Rank ladder. */
-    val newRank: Int? = null,
+    /** XP this run earned, and where that left the city. Recomputed server-side. */
+    val xpEarned: Int = 0,
+    val cityLevel: Int = 1,
+    val levelsGained: Int = 0,
+    /** Streak points awarded, when this day completed a ten-day block. */
+    val streakPointsAwarded: Int = 0,
+    /** Tiers lost to missed days, so the screen can be gentle about saying so. */
+    val streakTiersLost: Int = 0,
     /** Set when a full multiplication round opened division for a table. */
     val divisionUnlockedFor: Int? = null,
 )

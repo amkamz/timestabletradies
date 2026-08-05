@@ -6,7 +6,7 @@ import { Screen, ScreenBody } from "@/components/shell/screen";
 import { BottomNav } from "@/components/shell/nav";
 import { requireActiveStudent } from "@/lib/data/session";
 import { formatTradieName } from "@/lib/game/names";
-import { rankName } from "@/lib/game/progression";
+import { levelLabel } from "@/lib/game/city-level";
 import { createClient } from "@/lib/supabase/server";
 
 /** E1 · Crew race lobby, plus the entry points for Trade Expo and challenges. */
@@ -64,7 +64,7 @@ export default async function CrewPage() {
                     : mate.display_name}
                 </span>
                 <span className="block font-sans text-[10px] font-extrabold text-mud">
-                  {rankName(mate.rank_rung)}
+                  {levelLabel(mate.city_xp)}
                 </span>
               </span>
               <Link

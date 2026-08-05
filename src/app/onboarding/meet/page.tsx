@@ -5,7 +5,7 @@ import { AppFrame, Screen, ScreenBody } from "@/components/shell/screen";
 import { requireParent } from "@/lib/actions/auth";
 import { selectStudent } from "@/lib/actions/onboarding";
 import { formatTradieName } from "@/lib/game/names";
-import { rankName } from "@/lib/game/progression";
+import { levelLabel } from "@/lib/game/city-level";
 import { createClient } from "@/lib/supabase/server";
 
 /** A7 · Meet your tradie — confirm, then straight into the first job. */
@@ -46,7 +46,7 @@ export default async function MeetPage(props: PageProps<"/onboarding/meet">) {
             {tradieName}
           </h1>
           <p className="mt-1 font-sans text-xs font-black text-red-tint uppercase">
-            {rankName(data.rank_rung)} · Ready for work
+            {levelLabel(data.city_xp)} · Ready for work
           </p>
 
           <form action={selectStudent} className="mt-auto w-full pt-8">

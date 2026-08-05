@@ -27,8 +27,15 @@ export type ShopItem = {
   coins: number;
   /** Swatch colours used to render the item preview. */
   swatch: [string, string];
-  /** Trade Rank rung required, if any — earned, never bought. */
-  requiresRank?: number;
+  /**
+   * City level required, if any — earned, never bought.
+   *
+   * Was `requiresRank` against the Trade Rank ladder, which could *fall*: an
+   * item a child had qualified for could disappear from the shop after one
+   * slow Yard round. City level only rises, so a thing that becomes available
+   * stays available.
+   */
+  requiresLevel?: number;
 };
 
 export const SHOP_ITEMS: readonly ShopItem[] = [
@@ -40,7 +47,7 @@ export const SHOP_ITEMS: readonly ShopItem[] = [
   { key: "hat-racing-stripe", name: "Racing Stripe", category: "hats", coins: 320, swatch: ["#3f7fd1", "#ffd400"] },
   { key: "hat-camo", name: "Bush Camo", category: "hats", coins: 380, swatch: ["#6f7a4a", "#3f4a2a"] },
   { key: "hat-chrome", name: "Chrome Finish", category: "hats", coins: 900, swatch: ["#cfd6dc", "#8b959d"] },
-  { key: "hat-legend", name: "Legend Gold", category: "hats", coins: 1500, swatch: ["#edb521", "#a8721a"], requiresRank: 9 },
+  { key: "hat-legend", name: "Legend Gold", category: "hats", coins: 1500, swatch: ["#edb521", "#a8721a"], requiresLevel: 18 },
 
   // Hi-vis
   { key: "vest-standard", name: "Standard Hi-Vis", category: "vests", coins: 0, swatch: ["#ffd400", "#c9c4ba"] },
@@ -49,7 +56,7 @@ export const SHOP_ITEMS: readonly ShopItem[] = [
   { key: "vest-stripe", name: "Double Stripe", category: "vests", coins: 300, swatch: ["#ffd400", "#3f7fd1"] },
   { key: "vest-crew", name: "Crew Colours", category: "vests", coins: 420, swatch: ["#17b5a4", "#ffd400"] },
   { key: "vest-jacket", name: "Wet-Weather Jacket", category: "vests", coins: 620, swatch: ["#3f7fd1", "#111111"] },
-  { key: "vest-foreman", name: "Foreman's Jacket", category: "vests", coins: 1100, swatch: ["#e5322d", "#111111"], requiresRank: 7 },
+  { key: "vest-foreman", name: "Foreman's Jacket", category: "vests", coins: 1100, swatch: ["#e5322d", "#111111"], requiresLevel: 14 },
 
   // Tool belts
   { key: "belt-canvas", name: "Canvas Belt", category: "belts", coins: 0, swatch: ["#c8a06a", "#8a6a3f"] },
@@ -57,14 +64,14 @@ export const SHOP_ITEMS: readonly ShopItem[] = [
   { key: "belt-red-handles", name: "Red-Handled Set", category: "belts", coins: 340, swatch: ["#e5322d", "#111111"] },
   { key: "belt-titanium", name: "Titanium Set", category: "belts", coins: 780, swatch: ["#9aa4ad", "#5c646b"] },
   { key: "belt-glow", name: "Glow Grips", category: "belts", coins: 950, swatch: ["#8fd8cd", "#17b5a4"] },
-  { key: "belt-master", name: "Master's Kit", category: "belts", coins: 1800, swatch: ["#edb521", "#111111"], requiresRank: 9 },
+  { key: "belt-master", name: "Master's Kit", category: "belts", coins: 1800, swatch: ["#edb521", "#111111"], requiresLevel: 18 },
 
   // Utes — unlocked later in progression
-  { key: "ute-white", name: "Site White", category: "utes", coins: 500, swatch: ["#ffffff", "#c9c4ba"], requiresRank: 4 },
-  { key: "ute-yellow", name: "Hi-Vis Yellow", category: "utes", coins: 700, swatch: ["#ffd400", "#e0a021"], requiresRank: 4 },
-  { key: "ute-teal", name: "Teal Tradie", category: "utes", coins: 900, swatch: ["#17b5a4", "#0f7c70"], requiresRank: 5 },
-  { key: "ute-flames", name: "Flame Job", category: "utes", coins: 1400, swatch: ["#e5322d", "#ffd400"], requiresRank: 6 },
-  { key: "ute-vintage", name: "Restored Classic", category: "utes", coins: 2200, swatch: ["#3f7fd1", "#efe1c4"], requiresRank: 8 },
+  { key: "ute-white", name: "Site White", category: "utes", coins: 500, swatch: ["#ffffff", "#c9c4ba"], requiresLevel: 8 },
+  { key: "ute-yellow", name: "Hi-Vis Yellow", category: "utes", coins: 700, swatch: ["#ffd400", "#e0a021"], requiresLevel: 8 },
+  { key: "ute-teal", name: "Teal Tradie", category: "utes", coins: 900, swatch: ["#17b5a4", "#0f7c70"], requiresLevel: 10 },
+  { key: "ute-flames", name: "Flame Job", category: "utes", coins: 1400, swatch: ["#e5322d", "#ffd400"], requiresLevel: 12 },
+  { key: "ute-vintage", name: "Restored Classic", category: "utes", coins: 2200, swatch: ["#3f7fd1", "#efe1c4"], requiresLevel: 16 },
 
   // Accessories
   { key: "acc-sunnies", name: "Site Sunnies", category: "accessories", coins: 90, swatch: ["#111111", "#3f7fd1"] },
@@ -86,20 +93,20 @@ export function findItem(key: string): ShopItem | undefined {
 
 export type PurchaseCheck =
   | { ok: true }
-  | { ok: false; reason: "owned" | "coins" | "rank"; message: string };
+  | { ok: false; reason: "owned" | "coins" | "level"; message: string };
 
 export function canPurchase(
   item: ShopItem,
-  state: { coins: number; rank: number; owned: string[] },
+  state: { coins: number; level: number; owned: string[] },
 ): PurchaseCheck {
   if (state.owned.includes(item.key)) {
     return { ok: false, reason: "owned", message: "Already in your locker" };
   }
-  if (item.requiresRank && state.rank < item.requiresRank) {
+  if (item.requiresLevel && state.level < item.requiresLevel) {
     return {
       ok: false,
-      reason: "rank",
-      message: `Unlocks at Trade Rank ${item.requiresRank}`,
+      reason: "level",
+      message: `Unlocks at city level ${item.requiresLevel}`,
     };
   }
   if (state.coins < item.coins) {

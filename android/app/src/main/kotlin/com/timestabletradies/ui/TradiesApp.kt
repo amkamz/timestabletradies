@@ -17,6 +17,7 @@ import com.timestabletradies.core.designsystem.PopTab
 import com.timestabletradies.core.designsystem.PopTabScaffold
 import com.timestabletradies.core.designsystem.PopTokens
 import com.timestabletradies.core.model.AnsweredFact
+import com.timestabletradies.core.model.CityLevel
 import com.timestabletradies.core.model.ModeAvailability
 import com.timestabletradies.core.model.Operation
 import com.timestabletradies.core.model.PracticeMode
@@ -52,7 +53,7 @@ import com.timestabletradies.ui.mastery.MasteryGridScreen
 import com.timestabletradies.ui.modes.BigJobScreen
 import com.timestabletradies.ui.modes.GarageScreen
 import com.timestabletradies.ui.modes.ToolboxTimeScreen
-import com.timestabletradies.ui.modes.TradeRankScreen
+import com.timestabletradies.ui.modes.TheYardScreen
 import com.timestabletradies.ui.modes.TradeZonesScreen
 import com.timestabletradies.ui.modes.NotOnAndroidYetScreen
 import com.timestabletradies.ui.modes.TrainingShedScreen
@@ -82,7 +83,6 @@ import com.timestabletradies.ui.state.Storyboard
 import com.timestabletradies.ui.state.TradieDraft
 import com.timestabletradies.ui.state.ZoneRow
 import com.timestabletradies.ui.state.ZoneState
-import com.timestabletradies.ui.state.rankNameFor
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -744,9 +744,8 @@ fun TradiesApp(
             onBack = { pop() },
         )
 
-        FullRoute.Yard -> TradeRankScreen(
-            currentRung = student?.rankRung ?: 1,
-            justRankedUp = (lastSummary as? RunSummary.Banked)?.newRank != null,
+        FullRoute.Yard -> TheYardScreen(
+            cityLevel = CityLevel.levelOf(student?.cityXp ?: 0),
             onRunTheYard = {
                 pop()
                 push(
@@ -1183,7 +1182,9 @@ private suspend fun submitRun(
                 coinsTotal = outcome.coinsTotal,
                 capped = outcome.capped,
                 housesCompleted = outcome.houseStagesCompleted,
-                newRank = outcome.newRank?.let { rankNameFor(it) },
+                newCityLevel = outcome.cityLevel.takeIf { outcome.levelsGained > 0 },
+                streakPointsAwarded = outcome.streakPointsAwarded,
+                streakTiersLost = outcome.streakTiersLost,
                 divisionUnlockedFor = outcome.divisionUnlockedFor,
             )
         },

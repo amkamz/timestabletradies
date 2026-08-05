@@ -20,7 +20,11 @@ data class StudentDto(
     @SerialName("name_surname") val nameSurname: String? = null,
     @SerialName("look_model") val lookModel: Int = 1,
     val coins: Int = 0,
+    /** Deprecated: Trade Rank was replaced by [cityXp]. Kept because the row still has it. */
     @SerialName("rank_rung") val rankRung: Int = 1,
+    @SerialName("city_xp") val cityXp: Int = 0,
+    @SerialName("streak_tier") val streakTier: Int = 0,
+    @SerialName("streak_points") val streakPoints: Int = 0,
     @SerialName("house_stage") val houseStage: Int = 0,
     @SerialName("house_loads") val houseLoads: Int = 0,
 ) {

@@ -10,10 +10,11 @@ import { getEntitlementForStudent } from "@/lib/data/entitlement";
 import { factKey, isDueForReview, stageForFact, emptyFactStats } from "@/lib/game/mastery";
 import {
   bankMaterials,
-  rankFromYardResult,
   rareItemForZone,
   type HouseStage,
 } from "@/lib/game/progression";
+import { levelFromXp, levelsGained, xpForRun } from "@/lib/game/city-level";
+import { recordPlay } from "@/lib/game/streak";
 import { scaffoldReward, type ScaffoldReward } from "@/lib/game/scaffold";
 import {
   getMastery,
@@ -103,8 +104,15 @@ export type RunResult = {
   stagesCompleted: HouseStage[];
   houseStage: number;
   houseLoads: number;
-  /** Set when this run pushed the student up the Trade Rank ladder. */
-  newRank?: number;
+  /** XP this run earned toward the city level. */
+  xpEarned: number;
+  /** The city level after the run, and how many levels it crossed. */
+  cityLevel: number;
+  levelsGained: number;
+  /** Streak points awarded, when this day completed a ten-day block. */
+  streakPointsAwarded: number;
+  /** Tiers lost to missed days, so the screen can be gentle about saying so. */
+  streakTiersLost: number;
   /** Set when a full multiplication round opened division for a table. */
   divisionUnlockedFor?: number;
   /** Set when the 12×12 grid went fully Blue and a new table opened. */
@@ -349,26 +357,41 @@ export async function finishRun(payload: RunPayload): Promise<RunResult> {
     materials,
   );
 
-  // ---- trade rank ---------------------------------------------------------
+  // ---- city level ---------------------------------------------------------
 
-  let newRank: number | undefined;
-  if (payload.mode === "yard") {
-    const rung = rankFromYardResult({
-      accuracy: scored.accuracy,
-      avgMs: scored.avgMs,
-      questions: total,
-    });
-    // The Yard sets the rank outright, but never demotes on a bad day.
-    if (rung > student.rank_rung) newRank = rung;
-  }
+  // XP replaces Trade Rank. Correct answers only — XP is for work done, and a
+  // wrong answer is practice rather than progress. Daily jobs pay the full
+  // rate and everything else pays less, so a game is never worth more than the
+  // work.
+  const xpEarned = xpForRun(payload.mode, scored.correct);
+  const newXp = student.city_xp + xpEarned;
+  const levelsUp = levelsGained(student.city_xp, newXp);
+
+  // ---- streak -------------------------------------------------------------
+
+  // Idempotent within a day, which matters because this runs per finished run
+  // rather than once a morning.
+  const streak = recordPlay(
+    {
+      tier: student.streak_tier,
+      points: student.streak_points,
+      daysIntoBlock: student.streak_days_into_block,
+      lastPlayedOn: student.streak_last_played_on,
+    },
+    new Date().toISOString().slice(0, 10),
+  );
 
   await supabase
     .from("students")
     .update({
       coins: student.coins + coins,
+      city_xp: newXp,
       house_stage: house.stageIndex,
       house_loads: house.loads,
-      ...(newRank ? { rank_rung: newRank } : {}),
+      streak_tier: streak.state.tier,
+      streak_points: streak.state.points,
+      streak_days_into_block: streak.state.daysIntoBlock,
+      streak_last_played_on: streak.state.lastPlayedOn,
     })
     .eq("id", student.id);
 
@@ -384,7 +407,11 @@ export async function finishRun(payload: RunPayload): Promise<RunResult> {
     stagesCompleted: house.completed,
     houseStage: house.stageIndex,
     houseLoads: house.loads,
-    newRank,
+    xpEarned,
+    cityLevel: levelFromXp(newXp).level,
+    levelsGained: levelsUp,
+    streakPointsAwarded: streak.pointsAwarded,
+    streakTiersLost: streak.tiersLost,
     ...(scaffold
       ? {
           height: scored.correct,

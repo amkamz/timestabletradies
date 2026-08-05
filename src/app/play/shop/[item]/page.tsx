@@ -6,6 +6,7 @@ import { Screen, ScreenBody } from "@/components/shell/screen";
 import { requireActiveStudent } from "@/lib/data/session";
 import { getCosmetics } from "@/lib/data/student";
 import { SHOP_CATEGORIES, canPurchase, findItem } from "@/lib/game/shop";
+import { levelFromXp } from "@/lib/game/city-level";
 
 import { TryOnActions } from "./try-on";
 
@@ -22,7 +23,7 @@ export default async function TryOnPage(props: PageProps<"/play/shop/[item]">) {
   const ownedKeys = owned.map((o) => o.item_key);
   const check = canPurchase(item, {
     coins: student.coins,
-    rank: student.rank_rung,
+    level: levelFromXp(student.city_xp).level,
     owned: ownedKeys,
   });
   const isOwned = ownedKeys.includes(item.key);

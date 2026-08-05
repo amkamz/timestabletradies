@@ -1,5 +1,6 @@
 package com.timestabletradies
 
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -13,6 +14,7 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import com.timestabletradies.core.designsystem.PopTheme
+import com.timestabletradies.ui.AppEntry
 import com.timestabletradies.ui.TradiesApp
 
 class MainActivity : ComponentActivity() {
@@ -20,6 +22,12 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         goImmersive()
+
+        // Read once, from the intent that started the activity. A /cheer link
+        // is the grandparent's entire way in — they hold a link, not an
+        // account — so it has to be honoured before the nav gate, which would
+        // otherwise send them to a sign-in they can never complete.
+        val entry = intent?.data?.let(::deepLinkEntry)
 
         setContent {
             // The student's accessibility preferences sit above the theme,
@@ -30,6 +38,7 @@ class MainActivity : ComponentActivity() {
 
             PopTheme(reducedMotion = reducedMotion, textScale = textScale) {
                 TradiesApp(
+                    entry = entry,
                     onPreferences = { motion, scale ->
                         reducedMotion = motion
                         textScale = scale
@@ -72,4 +81,26 @@ class MainActivity : ComponentActivity() {
             hide(WindowInsetsCompat.Type.systemBars())
         }
     }
+}
+
+/**
+ * Turn an incoming link into a starting point.
+ *
+ * Only two paths are honoured, and neither of them can reach a child's data:
+ * `/cheer` opens the grandparent's sticker screen, `/join` drops a parent at
+ * sign-in with an invite code to redeem. Anything else falls through to the
+ * normal launch, because a deep link is untrusted input and the safe default is
+ * to ignore it rather than guess.
+ */
+private fun deepLinkEntry(uri: Uri): AppEntry? = when {
+    uri.path?.startsWith("/cheer") == true -> AppEntry.Cheer(
+        childName = uri.getQueryParameter("name")?.take(40) ?: "them",
+        milestone = uri.getQueryParameter("milestone")?.take(60),
+    )
+
+    uri.path?.startsWith("/join") == true -> AppEntry.Join(
+        code = uri.getQueryParameter("code")?.take(16),
+    )
+
+    else -> null
 }

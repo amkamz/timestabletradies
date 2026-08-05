@@ -21,6 +21,26 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
+            <!--
+                Deep links, registered now rather than later (§2.4).
+
+                /cheer is the grandparent's whole entry point: they get a link,
+                not a login, and it opens straight onto the sticker screen. /join
+                is invite redemption, which a parent follows from an email.
+
+                Marked autoVerify so they can become App Links the moment
+                assetlinks.json is published on the domain — until then they open
+                the chooser, which still works.
+            -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="timestabletradie.app" />
+                <data android:pathPrefix="/cheer" />
+                <data android:pathPrefix="/join" />
+            </intent-filter>
         </activity>
     </application>
 

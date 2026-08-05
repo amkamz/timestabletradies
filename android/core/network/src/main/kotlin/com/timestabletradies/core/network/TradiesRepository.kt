@@ -6,6 +6,8 @@ import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.auth.status.SessionStatus
 import io.github.jan.supabase.functions.functions
 import io.github.jan.supabase.postgrest.from
+import io.github.jan.supabase.postgrest.query.Columns
+import io.github.jan.supabase.postgrest.query.Order
 import io.ktor.client.call.body
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
@@ -52,6 +54,36 @@ class TradiesRepository(private val client: SupabaseClient) {
 
     suspend fun signOut() {
         client.auth.signOut()
+    }
+
+    /**
+     * Create a parent account.
+     *
+     * Sign-*in* is a plain SDK call; sign-*up* is not. Creating the auth user is
+     * only half of it — a family row and the membership that scopes every RLS
+     * policy have to be created in the same transaction, and a client cannot be
+     * trusted to do that for itself. So this is an Edge Function (§1.4), and it
+     * is one of the endpoints §1.1 has yet to write.
+     *
+     * **Until that function is deployed this call fails**, and the screen above
+     * it shows the failure rather than a spinner. That is deliberate: a signed-in
+     * parent with no family row would pass the nav gate and then find every
+     * query empty, which is a much worse thing to debug than a clear error at
+     * the point of creation.
+     */
+    suspend fun signUpParent(name: String, email: String, password: String) {
+        client.functions
+            .invoke("onboarding-signup") {
+                contentType(ContentType.Application.Json)
+                setBody(
+                    SignUpRequest(
+                        name = name.trim(),
+                        email = email.trim(),
+                        password = password,
+                    ),
+                )
+            }
+            .body<Unit>()
     }
 
     fun currentUserId(): String? = client.auth.currentUserOrNull()?.id
@@ -133,6 +165,38 @@ class TradiesRepository(private val client: SupabaseClient) {
                 method = HttpMethod.Get
             }
             .body()
+
+    /**
+     * The last few attempts at one fact, newest first.
+     *
+     * `fact_mastery` only carries lifetime totals, so a rolling window has to
+     * come from the answer log itself. Both orderings are fetched — 7 × 10 and
+     * 10 × 7 are the same fact to a child even though `factKey` stores them
+     * apart — and division counts too, since knowing 70 ÷ 7 is knowing 7 × 10.
+     *
+     * Over-fetches and trims client-side: `or` across two column pairs is
+     * awkward to express in the query DSL, and the answer log for one fact is
+     * small enough that reading a few extra rows costs nothing.
+     */
+    suspend fun recentAnswers(
+        studentId: String,
+        a: Int,
+        b: Int,
+        window: Int = 20,
+    ): List<AnswerRowDto> =
+        client.from("answers")
+            .select(Columns.list("a", "b", "correct", "elapsed_ms")) {
+                filter {
+                    eq("student_id", studentId)
+                    isIn("a", listOf(a, b))
+                    isIn("b", listOf(a, b))
+                }
+                order("id", Order.DESCENDING)
+                limit(window * 4L)
+            }
+            .decodeList<AnswerRowDto>()
+            .filter { (it.a == a && it.b == b) || (it.a == b && it.b == a) }
+            .take(window)
 
     /** The house build: stage, loads, and the rare items won so far. */
     suspend fun house(studentId: String): HouseState =

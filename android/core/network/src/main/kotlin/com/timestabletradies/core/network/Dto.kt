@@ -37,6 +37,20 @@ data class StudentDto(
             ?: displayName
 }
 
+/**
+ * Parent sign-up.
+ *
+ * The password crosses the wire to an Edge Function rather than to Postgres —
+ * it is handed to Supabase Auth server-side, alongside creating the family row
+ * and membership in the same transaction (§1.4).
+ */
+@Serializable
+data class SignUpRequest(
+    val name: String,
+    val email: String,
+    val password: String,
+)
+
 @Serializable
 data class FamilyMemberDto(
     @SerialName("family_id") val familyId: String,
@@ -63,4 +77,19 @@ data class FactMasteryDto(
     @SerialName("avg_ms") val avgMs: Int = 0,
     @SerialName("speed_attempts") val speedAttempts: Int = 0,
     @SerialName("retention_hits") val retentionHits: Int = 0,
+)
+
+/**
+ * One row of the answer log.
+ *
+ * Read-only here — the client posts answers through `run-finish` and never
+ * writes this table directly, which is what stops a client asserting its own
+ * accuracy. Reading it back is fine: RLS scopes it to the family.
+ */
+@Serializable
+data class AnswerRowDto(
+    val a: Int,
+    val b: Int,
+    val correct: Boolean,
+    @SerialName("elapsed_ms") val elapsedMs: Int = 0,
 )

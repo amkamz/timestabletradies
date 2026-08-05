@@ -71,7 +71,19 @@ Deno.serve(async (req) => {
   const authorization = req.headers.get("Authorization");
   if (!authorization) return json({ error: "Not signed in" }, 401);
 
-  let payload: { studentId?: string; mode?: RunMode; tableNo?: number | null };
+  let payload: {
+    studentId?: string;
+    mode?: RunMode;
+    tableNo?: number | null;
+    /**
+     * Toolbox Time lets a child pick several tables, so one `tableNo` cannot
+     * carry the request. Every entry is still filtered against what they are
+     * actually entitled to below — this narrows the pool, it never widens it.
+     */
+    tables?: number[] | null;
+    /** Also Toolbox Time. Clamped to what division they have unlocked. */
+    operation?: "multiply" | "divide" | "both" | null;
+  };
   try {
     payload = await req.json();
   } catch {
@@ -165,14 +177,33 @@ Deno.serve(async (req) => {
           practiceWeight(mastery.get(factKey(a, b)) ?? emptyFactStats(a, b))
       : undefined;
 
+  // A requested pool is an *intersection*, never a substitution: whatever the
+  // client asks for is filtered against what this family is entitled to, so a
+  // modified client asking for ×7 on the free tier gets back the free tier.
   const table = payload.tableNo ?? null;
-  const pool = table && tables.includes(table) ? [table] : tables;
+  const requested = (payload.tables ?? []).filter((t) => tables.includes(t));
+  const pool = requested.length > 0
+    ? requested
+    : table && tables.includes(table)
+    ? [table]
+    : tables;
+
+  // The Yard is a speed test and stays multiply-only so ranks stay comparable.
+  // Otherwise the child may choose, clamped to the division they have actually
+  // unlocked — asking for "divide" without it would build an empty run.
+  const canDivide = divisionUnlocked.length > 0 && mode !== "yard";
+  const asked = payload.operation ?? null;
+  const operation = !canDivide
+    ? "multiply"
+    : asked === "divide" || asked === "multiply" || asked === "both"
+    ? asked
+    : "both";
 
   const questions = generateQuestionSet({
     seed: newRunSeed(student.id, mode),
     tables: pool,
     divisionUnlocked,
-    operation: divisionUnlocked.length > 0 && mode !== "yard" ? "both" : "multiply",
+    operation,
     count: QUESTION_COUNT[mode] ?? 10,
     withChoices: false,
     weightFor,

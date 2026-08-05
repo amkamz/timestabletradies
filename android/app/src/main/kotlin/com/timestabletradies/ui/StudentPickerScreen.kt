@@ -54,7 +54,9 @@ fun StudentPickerScreen(
     LaunchedEffect(Unit) {
         runCatching { repository.students() }
             .onSuccess { students = it }
-            .onFailure { error = it.message ?: "Couldn't load profiles." }
+            // Text this app wrote, not the transport's. See loadStudentData in
+            // TradiesApp for why a raw exception message must never be rendered.
+            .onFailure { error = "Couldn't load profiles just now." }
     }
 
     PopScreen(title = "Who's working today?") {
@@ -102,7 +104,6 @@ private fun StudentCard(student: StudentDto, onClick: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .clickable(role = Role.Button, onClick = onClick),
-        shadow = PopShadow.Medium,
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             // Character art is a labelled placeholder throughout the app,
@@ -113,7 +114,6 @@ private fun StudentCard(student: StudentDto, onClick: () -> Unit) {
                     .popSurface(
                         fill = PopTokens.TealTint,
                         radius = PopTokens.RadiusSm,
-                        shadow = PopShadow.Small,
                     ),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,

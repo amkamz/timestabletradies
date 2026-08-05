@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -24,18 +23,21 @@ import androidx.compose.ui.unit.dp
 
 /**
  * A panel. The workhorse container — job cards, mode cards, results.
+ *
+ * **No shadow, and no way to ask for one.** A shadow in this design means "you
+ * can press this", and a card is a container. Where the whole card *is* the tap
+ * target, use `PopTapCard` instead — that one is a button and looks like it.
  */
 @Composable
 fun PopCard(
     modifier: Modifier = Modifier,
     fill: Color = PopTokens.White,
-    shadow: PopShadow = PopShadow.Medium,
     padding: PaddingValues = PaddingValues(16.dp),
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Column(
         modifier = modifier
-            .popSurface(fill = fill, radius = PopTokens.RadiusMd, shadow = shadow)
+            .popSurface(fill = fill, radius = PopTokens.RadiusMd)
             .padding(padding),
         content = content,
     )
@@ -94,7 +96,7 @@ fun PopScreen(
                 // stops short of the bars rather than sliding content beneath
                 // them. `safeDrawing` also covers display cutouts and the
                 // keyboard, which matters on the sign-in screen.
-                .windowInsetsPadding(WindowInsets.safeDrawing)
+                .windowInsetsPadding(PopInsets.content)
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp, vertical = 24.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),

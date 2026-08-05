@@ -14,6 +14,16 @@ data class RunStartRequest(
     val studentId: String,
     val mode: String,
     val tableNo: Int? = null,
+    /**
+     * Several tables at once — Toolbox Time, where the child picks the mix.
+     *
+     * A *request*, not an instruction: the server intersects this with what the
+     * family is entitled to, so asking for a table you haven't unlocked narrows
+     * to nothing rather than opening it (§1.10).
+     */
+    val tables: List<Int>? = null,
+    /** multiply | divide | both. Clamped server-side to division unlocked. */
+    val operation: String? = null,
 )
 
 @Serializable

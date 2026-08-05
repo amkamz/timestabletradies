@@ -1,19 +1,24 @@
 package com.timestabletradies.core.designsystem
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
+import kotlinx.coroutines.launch
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -37,6 +42,14 @@ fun PopKeypad(
     onSubmit: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    /**
+     * Hide the ✓ key when the screen already carries its own submit.
+     *
+     * Site Delivery's "DELIVER IT" is the same action under a name that belongs
+     * to the scenario, and offering both would give a child two buttons for one
+     * decision — the exact thing a keypad exists to avoid.
+     */
+    showSubmit: Boolean = true,
 ) {
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -73,15 +86,19 @@ fun PopKeypad(
                 enabled = enabled,
                 modifier = Modifier.weight(1f),
             )
-            Key(
-                label = "✓",
-                spokenLabel = "Check answer",
-                onClick = onSubmit,
-                enabled = enabled,
-                fill = PopTokens.Teal,
-                content = PopTokens.White,
-                modifier = Modifier.weight(1f),
-            )
+            if (showSubmit) {
+                Key(
+                    label = "✓",
+                    spokenLabel = "Check answer",
+                    onClick = onSubmit,
+                    enabled = enabled,
+                    fill = PopTokens.Teal,
+                    content = PopTokens.White,
+                    modifier = Modifier.weight(1f),
+                )
+            } else {
+                Spacer(Modifier.weight(1f))
+            }
         }
     }
 }
@@ -97,18 +114,38 @@ private fun Key(
     content: Color = PopTokens.Ink,
 ) {
     val interactionSource = rememberPopInteractionSource()
-    val press by rememberPopPressOffset(interactionSource)
+
+    // The flash. A key that only moves is easy to miss on a fast tap — the
+    // travel is 45ms and a child's thumb is already gone. The colour lingers
+    // and decays instead, so the confirmation outlasts the gesture.
+    val reducedMotion = LocalPopReducedMotion.current
+    val flash = remember { Animatable(0f) }
+    val scope = rememberCoroutineScope()
 
     Box(
         modifier = modifier
-            .offset(x = press, y = press)
-            .popSurface(fill = if (enabled) fill else PopTokens.SandFill)
+            .popPressSurface(
+                interactionSource = interactionSource,
+                fill = when {
+                    !enabled -> PopTokens.SandFill
+                    // Toward the flash colour by however much is left of it.
+                    else -> lerp(fill, PopTokens.Yellow, flash.value)
+                },
+            )
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
                 enabled = enabled,
                 role = Role.Button,
-                onClick = onClick,
+                onClick = {
+                    if (!reducedMotion) {
+                        scope.launch {
+                            flash.snapTo(1f)
+                            flash.animateTo(0f, tween(durationMillis = 260))
+                        }
+                    }
+                    onClick()
+                },
             )
             .then(
                 // The glyph keys need a spoken label; the digits already read

@@ -47,8 +47,46 @@ object PopTokens {
     val AmberDeep = Color(0xFFA8721A)
 
     val Blue = Color(0xFF3F7FD1)
+    val BlueTint = Color(0xFFE4EFFF)
     val Orange = Color(0xFFE0842B)
     val Brick = Color(0xFFD2552E)
+
+    /* ----------------------------------------------------------- the site */
+
+    // The home screen's landscape, from the signed-off build spec. These are
+    // the one place in the app where a colour describes a *place* rather than
+    // a role, so they are named after what they draw.
+
+    val SkyTop = Color(0xFFA9E6F5)
+    val SkyBottom = Color(0xFFD8F3EE)
+    val Hill = Color(0xFF9BD8BD)
+    val Ground = Color(0xFFCBB98D)
+
+    /**
+     * The deck the buttons sit on: `rgba(203,185,141,.55)`.
+     *
+     * Translucent on purpose — the ground runs *behind* it, which is what makes
+     * the deck read as a platform laid over the site rather than a panel
+     * covering it.
+     */
+    val Deck = Color(0xFFCBB98D).copy(alpha = 0.55f)
+    val DeckBorder = Color(0xFF3A2F16)
+
+    /** `rgba(35,28,12,.34)` — the progress well recessed into the deck. */
+    val DeckWell = Color(0xFF231C0C).copy(alpha = 0.34f)
+    val DeckWellTrack = Color(0xFF231C0C).copy(alpha = 0.35f)
+    val DeckTitle = Color(0xFFFFF6E2)
+    val DeckPercent = Color(0xFFFFB1AE)
+
+    /* -------------------------------------------------------- the nav bar */
+
+    // Five cells that touch. The bar is the one surface in the app with no
+    // shadow, no radius and no gaps — it is furniture, not a sticker.
+
+    val NavRest = Color(0xFFDCEBE6)
+    val NavIcon = Color(0xFFC8DED7)
+    val NavJoint = Color(0xFF25332F)
+    val NavLive = Color(0xFF0F5A52)
 
     /* ------------------------------------------------------------ neutrals */
 
@@ -69,12 +107,28 @@ object PopTokens {
 
     /* ------------------------------------------------------ mastery ladder */
 
-    // Colourblind-safe, and always paired with a glyph — see MasteryStage.
-    val GradeNone = Color(0xFFD8D2C4)
-    val GradeBronze = Color(0xFFC17C3A)
-    val GradeSilver = Color(0xFF9AA4AD)
-    val GradeGold = Color(0xFFEDB521)
+    /**
+     * Not-started → shaky → getting there → good → perfect.
+     *
+     * A traffic-light ramp read left to right, because that is what a child and
+     * a parent both already know how to read at a glance across 144 cells. Blue
+     * sits deliberately *outside* the ramp: perfect is not "very green", it is a
+     * different thing, and the sheen is the only gradient in the app.
+     *
+     * Colour is the primary channel here by design. The shapes that used to be
+     * stamped on every cell are now opt-in — see `student_settings` — because
+     * 144 glyphs at 20dp is noise for the readers who don't need them, and the
+     * ones who do get them everywhere the moment the switch is on.
+     */
+    val GradeNone = Color(0xFFCFCFCF)
+    val GradeBronze = Color(0xFFE5322D)
+    val GradeSilver = Color(0xFFF08A24)
+    val GradeGold = Color(0xFF3FA34D)
     val GradeBlue = Color(0xFF2F6FD0)
+
+    /** The "shiny blue — perfect and locked in" sheen on a mastered cell. */
+    val GradeBlueSheen = Color(0xFFEAFFFF)
+    val GradeBlueDeep = Color(0xFF5CC8FF)
 
     /* --------------------------------------------------------------- shape */
 
@@ -103,4 +157,13 @@ enum class PopShadow(val x: Dp, val y: Dp) {
 
     /** `--shadow-pop-lg: 6px 7px 0` */
     Large(6.dp, 7.dp),
+
+    /**
+     * `5px 6px 0` — the one-off on START WORK, from the locked home spec.
+     *
+     * It sits between Medium and Large because the home screen's primary action
+     * has to out-weigh the two buttons beneath it without reading as a
+     * different kind of object.
+     */
+    Hero(5.dp, 6.dp),
 }

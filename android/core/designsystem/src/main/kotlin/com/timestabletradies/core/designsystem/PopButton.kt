@@ -6,11 +6,9 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -71,13 +69,12 @@ fun PopButton(
     shadow: PopShadow = PopShadow.Medium,
 ) {
     val interactionSource = rememberPopInteractionSource()
-    val press by rememberPopPressOffset(interactionSource, shadow)
 
     Column(
         modifier = modifier
             .then(if (fullWidth) Modifier.fillMaxWidth() else Modifier)
-            .offset(x = press, y = press)
-            .popSurface(
+            .popPressSurface(
+                interactionSource = interactionSource,
                 fill = if (enabled) tone.fill else PopTokens.Stone,
                 radius = size.radius,
                 shadow = shadow,
@@ -131,7 +128,7 @@ fun PopChip(
     content: Color = PopTokens.Ink,
     glyph: String? = null,
 ) {
-    Column(modifier = modifier.popSurface(fill, PopTokens.RadiusSm, PopShadow.Small)) {
+    Column(modifier = modifier.popSurface(fill, PopTokens.RadiusSm)) {
         Text(
             text = if (glyph != null) "$glyph  $text" else text,
             style = PopType.Small,

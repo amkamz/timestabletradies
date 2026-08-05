@@ -16,6 +16,13 @@ clients — Kotlin/Compose and Swift/SwiftUI — sharing one Supabase backend.
 Android ships first. Nothing in the Android build may be written in a way that
 has to be undone for iOS — that constraint is what most of Part 2 is about.
 
+> **[`rescope.md`](rescope.md) (4 Aug 2026) supersedes parts of this document.**
+> An audit found that eight of the fifteen modes silently degrade into the same
+> keypad drill on Android. Two decisions followed: the mode list is **cut from
+> fifteen to nine**, and **Godot owns the character renderer and the three
+> surviving games**. That changes §1.8's mode table, §2.6, §4.7 and the Part 5
+> sequencing. Everything else below stands.
+
 ---
 
 ## Build status
@@ -29,22 +36,121 @@ Part 1 is under way. What is written and tested in the repo today:
 | §1.9 Difficulty-weighted rewards | ✅ `difficulty.ts`, wired through `questions.ts` and `finishRun` |
 | §1.6 Entitlement model | ✅ `entitlement.ts`, migration `0004` |
 | §1.10 Gate enforcement | ✅ `run-start` refuses locked modes and unentitled tables; `run-finish` re-checks |
-| §1.1 Edge Functions | ⚠️ `run-start`, `run-finish`, `modes`, `mastery`, `house` live. Rules reach Deno via `npm run edge:sync` |
+| §1.1 Edge Functions | ⚠️ `run-start`, `run-finish`, `modes`, `mastery`, `house` live — **5 of ~20**. `onboarding-signup`, `purchaseItem`/`equipItem`, crew, boss and sticker are all missing, so the app cannot create a user and coins have no sink. Rules reach Deno via `npm run edge:sync` |
 | §1.2 Web app onto the API | ⬜ **Not started — two write paths exist right now** |
 | §1.3 Board delivery | ⚠️ Done for question modes (`pending_runs`). Puzzle boards still to come |
 | §1.4 Auth / JWT student claim | ⬜ Not started |
 | §2.1–2.2 Android project + modules | ✅ Gradle 8.11.1, AGP 8.7.3, Kotlin 2.1, compileSdk 35 |
 | §2.3 Toolbox Pop in Compose | ✅ Primitives, hard shadows, Titan One / Nunito / Space Mono bundled |
-| §2.4 Navigation | ✅ Type-safe routes, session-gated: sign-in → picker → hub |
-| §2.5 Screens | ⚠️ Sign-in, picker, hub, runner, results, grid, house, settings. ~32 to go |
-| §2.6 The five game modes | ⬜ Blocked on §1.3 |
-| §2.7 Accessibility | ⚠️ Reduced motion, text scale, timer mode work. Read-aloud, high contrast, dyslexic font not built |
+| §2.4 Navigation | ✅ Session-gated, tabbed shell + full-screen stack, `/cheer` and `/join` deep links registered |
+| §2.5 Screens | ✅ All 38 mobile screens of the storyboard (A–G, I). Roughly half render live data; the rest are marked stubs — see below |
+| §2.6 The game modes | ⬜ **Now three, in Godot** ([`rescope.md`](rescope.md)). None exist on Android: `openMode` falls through to a keypad drill and `run-start` serves 10 plain questions, so Cable Run, Rally, Tool-Off, Scaffold and Floor Plan are currently the same run under five names |
+| §2.7 Accessibility | ⚠️ Reduced motion, text scale, timer mode, read-aloud and colourblind grid shapes work. Dyslexic font not built. **The shapes switch currently rides on `high_contrast`** — it needs its own column at the next migration |
 | §2.8–2.9 Offline, billing | ⬜ Not started |
+| Godot layer | ⬜ Not started — character renderer + the three games ([`rescope.md`](rescope.md)). Integration spike first |
+| §4.6 Account deletion | ⬜ Not started, and both stores require it |
 | Part 3 iOS | ⬜ Not started |
 
 The Android app signs in, reads real data over RLS, is handed a run by the
-server, plays it, and has the server mark and bank it. Verified end to end on a
-device. There is no question generator and no scoring on the client at all.
+server, plays it, and has the server mark and bank it. There is no question
+generator and no scoring on the client at all.
+
+**Verified on a device**: sign-in → picker → The Site → job board → briefing →
+run → server-marked results → grid updated, plus the shop, locker and mastery
+tabs. Two things that only showed up on hardware:
+
+- The signed-off home screen is specced on a 280 × 634 canvas. Treating those
+  numbers as **dp** reproduces the layout and destroys the composition. They are
+  **design pixels**, scaled by `width / 280` — see `SiteHomeScreen.kt`.
+- `RunMode` is a closed union server-side and `run-start` looks the key up in
+  `MODE_REQUIREMENTS` before anything else. An unknown key doesn't 404, it
+  throws inside the function and returns a **500**. The keys are `job`, `boss`
+  and `crewrace` — not `jobboard`.
+
+**Every mobile screen in the storyboard now exists and every flow connects**,
+but only the ones with an endpoint behind them show real data. The rest render
+from `ui/state/Storyboard.kt`, which names the endpoint each is waiting on:
+
+| Screen | Source |
+|---|---|
+| Sign-in, student picker, the runner, results, mastery grid, house, accessibility | Live |
+| Job board, briefing | `Storyboard.jobBoardStub` — blocked on §1.3 |
+| Shop catalogue, locker | Mirror of `lib/game/shop.ts`; purchases are in-memory until `purchaseItem` / `equipItem` are Edge Functions (§1.1). **Android has four categories to web's five** — `accessories` is unreachable and its items can never be equipped |
+| Crew lobby, expo, challenges, boss briefs | Stubs — blocked on the crew and boss endpoints (§1.1) |
+| Parent account creation (A3) | Calls `onboarding-signup`, **which does not exist yet** — the screen surfaces the failure rather than leaving a parent on a spinner |
+| Grandparent sticker (I2) | Renders and is interactive; `sendSticker` has no endpoint, so sending reports failure rather than a fake success |
+
+Three screens are not in the storyboard and had to be invented, because the
+storyboard's parent surfaces (H1–H9) are all desktop web and the mobile flows
+dead-ended without them: the post-gate "opening more trades" explainer, the
+"switch tradie" control behind the cog, and the `/cheer` deep link that is the
+only way into I2.
+
+The **grown-up gate uses 13–18 × 12–17**, per §1.4 — not the 7 × 9 the
+storyboard mock draws. A gate a fluent nine-year-old can clear is not a gate.
+
+**Only buttons have shadows.** The hard offset shadow is this design's one
+affordance for "you can press this", so cards, banners, panels, fields, wells
+and the nav bar have none — `popSurface` cannot draw one and `PopCard` has no
+parameter for it. Buttons use `popPressSurface`, which travels the surface *into*
+its shadow while the shadow collapses to nothing, so it bottoms out flush with
+the page. Offsetting a surface and its shadow together just slides the sticker
+sideways and reads as a bug.
+
+**Content clears the camera, backgrounds don't.** The app runs immersive, so
+`WindowInsets.statusBars` is zero and anything laid out against it sits under the
+punch-hole. `PopInsets` takes the largest of the status bar, the display cutout
+and a 28dp floor. Sky, ground and paper still run edge to edge — this is only
+about what the eye is meant to land on.
+
+**Leaving a job still banks it.** `run-finish` scores whatever answer log it is
+handed against the board it stored, so a child who answers six questions and
+quits has practised six facts and the grid says so. Quitting must never cost a
+child their progress — but note *where* the submit runs: popping the route
+unmounts the runner, which cancels its `rememberCoroutineScope` mid-request. The
+work is owned by `TradiesApp`, which outlives the screen being left.
+
+**`run-start` now accepts `tables[]` and `operation`**, so Toolbox Time's picker
+is real. Both are treated as *requests*: the table list is intersected with what
+the family is entitled to and the operation is clamped to the division they have
+unlocked, so a modified client asking for ×7 on the free tier still gets the free
+tier. **This change is in the repo but not deployed** — the old function ignores
+the extra fields, so the app degrades to the whole unlocked range until
+`run-start` ships.
+
+**A word problem must ask for the number the server is marking.** A served
+question carries `a`, `b` and an expected answer: `a × b` for multiply, but `b`
+for divide, whose prompt is `(a×b) ÷ a`. Wrapping a division question in a
+multiplication sentence — "2 panels, 3 palings each, how many palings?" — asks
+for 6 while the server marks 3, so a child who reasons correctly is told they are
+wrong. `Storyboard` therefore carries two pools and `wordProblemFor` picks on
+`question.operation`. Any new presentation that phrases a fact in words has to
+make the same split.
+
+**The runner latches when the log is handed over.** `onFinished` posts and
+*then* navigates, so there is a network round trip with the run screen still on
+top; clearing the feedback there hands back a live copy of the question just
+answered — an eleventh question in a ten-question job, and a second submission
+behind it. The flash stays up and `finishing` shuts every input until results
+arrive.
+
+**The mastery grid does not scroll**, and every cell keeps its position: 144
+squares changing shape over months is a picture, and a picture you have to scroll
+to compare halves of has become a list. Colour is the primary channel (grey →
+red → orange → green → shiny blue); the per-cell shapes are opt-in from
+accessibility. `factKey` stores `7×10` and `10×7` apart, so the grid merges them
+for display — **the real fix is canonicalising the key on write**, which would
+also stop the economy and `hasFullBlueGrid` counting one fact twice. Accuracy is
+over the last 20 attempts read from the `answers` log, not lifetime totals from
+`fact_mastery`.
+
+**No screen may render a throwable's message.** Ktor composes its exception text
+from the whole failed request, headers included, so `it.message` on a failure
+path prints the session's `Authorization: Bearer …` token full-screen — which is
+exactly what the run-start failure screen did until it was caught on a device.
+Log the cause, show a line this app wrote. The one remaining exception is
+`SignInScreen`, which shows the cause deliberately and only under
+`BuildConfig.DEBUG`.
 
 **The live gap:** `finishRun` now exists twice — as a server action in
 `src/lib/actions/play.ts` and as `supabase/functions/run-finish`. That is
@@ -57,6 +163,10 @@ coins stop with no explanation reads it as the game breaking.
 
 ## Contents
 
+- **[The rescope — fewer modes, Godot for the interactive layer](rescope.md)**
+- **[Screens and modes — current state, and where it should land](screens.md)**
+- **[The vision, page by page](vision.md)** — product intent, in progress
+- **[Godot asset contract](godot-asset-contract.md)** — naming and structure every 3D asset must obey
 - [Part 0 — Decisions to lock before any code](#part-0--decisions-to-lock-before-any-code)
 - [Part 1 — Server work (platform-neutral, do first)](#part-1--server-work-platform-neutral-do-first)
 - [Part 2 — Android](#part-2--android)
@@ -364,6 +474,11 @@ anything the parent dashboard presents as progress.
 
 ### 1.8 Mode unlocks
 
+> **Table amended by [`rescope.md`](rescope.md#decision-1--cut-the-mode-list).**
+> Site Inspection, Scaffold Stack, The Tool-Off, Trade Expo and Job Challenge are
+> retired, and The Big Job leaves the practice menu. Thresholds for the nine
+> survivors are unchanged, as is everything below about *how* gating works.
+
 Every mode declares what it needs. Locked modes are **shown, not hidden**, with
 the unmet requirement as the label.
 
@@ -664,6 +779,12 @@ is allowed and saves ~4 weeks. It is not allowed for the child-facing app.
 
 ### 2.6 The five game modes
 
+> **Superseded by [`rescope.md`](rescope.md).** Three modes, not five, and they
+> are built once in Godot rather than ported to Kotlin and then to Swift. The
+> `:core:model` port of the client-side halves described below is no longer
+> needed. The rest of this section — server-delivered board, local interaction,
+> post the log — is unchanged and is exactly the contract Godot works to.
+
 Budget these separately from screens — they're the reason for going native.
 
 Each is: render a server-delivered board, run interaction locally at 60fps,
@@ -697,6 +818,14 @@ stage glyph and text description already exist — wire them to
 `contentDescription`), the keypad, and every game board. The existing
 "dragging is never required" rule holds and should be stated as a standing
 constraint on all five modes.
+
+Note the word *required*. Measure Up on Android now offers a drag — press a
+job, pull a rope across, release on its total — **on top of** the tap-then-tap
+path, which stays the primary route and is the only one a screen reader or a
+switch device can take. The cells remain real buttons with real click handlers;
+the gesture only claims the pointer once a finger has travelled past the touch
+slop, so a tap never reaches it. iOS should copy that shape rather than
+replacing tapping with dragging.
 
 ### 2.8 Offline
 
@@ -904,6 +1033,12 @@ review.
 
 ### 4.7 Art
 
+> **Amended by [`rescope.md`](rescope.md).** The character pipeline is a Godot
+> rig — one skeleton with model, skin, hair and cosmetics as swappable
+> parameters — rather than exported slices per look. 20 models × 8 skins ×
+> 8 hair is 1,280 base looks before the 35 shop items layer on, which is why
+> pre-rendering was never going to work. House and prop art are unaffected.
+
 Unchanged from the README: every character and house art slot is a labelled
 placeholder. Native rendering makes this *more* visible, not less. Brief the
 illustrator at the start of Part 1 — it runs in parallel and it is the schedule
@@ -914,6 +1049,11 @@ Specify exports at 1x/2x/3x, and prefer vector where the style allows.
 ---
 
 # Part 5 — Sequencing
+
+> **Superseded by [`rescope.md`](rescope.md#sequencing).** That table is the one
+> to plan against: it starts from what is actually built, puts the mode cut and
+> the missing write path first, and carries the Godot phases. The figures below
+> are kept because the phase shapes and the Part 3 estimate still hold.
 
 Solo developer. Two developers roughly halves phases 2–6 and lets Part 3 overlap.
 
@@ -958,8 +1098,21 @@ plan against.
 - **Rewards weight steeply by per-fact difficulty**, and mastered trivial facts
   pay nothing. Paid on the spaced-repetition check-in rather than on repetition,
   so anti-grind doesn't break retention (§1.9).
+- **The mode list is nine, not fifteen** — `inspection`, `scaffold`, `tooloff`,
+  `expo` and `challenge` retired, `bigjob` moved off the practice menu as the
+  assessment it is. Grouped Practise / Play / Prove / Arrives, because the trade
+  names alone never told a child what a mode does ([`rescope.md`](rescope.md)).
+- **Godot owns the character renderer and the three surviving games**, exported
+  into the Compose and SwiftUI shells. It is a renderer, not a client: JSON in,
+  JSON out, no session and no network calls inside it. Two ports collapse to
+  one; web keeps its React implementations for now ([`rescope.md`](rescope.md)).
 
 # Open questions
+
+Three more were added by the rescope, and the first of them **blocks the Godot
+games**: TalkBack does not traverse a Godot surface, so §2.7's commitment to
+screen-reader semantics on every game board needs an answer before those games
+are built. See [`rescope.md`](rescope.md#open-questions).
 
 Things still needing a product decision rather than an engineering one:
 

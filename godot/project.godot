@@ -1,0 +1,25 @@
+; Times Table Tradies — the Godot rendering layer.
+;
+; This project is a *renderer, not a client*. It holds no session, makes no
+; network calls and has no Supabase SDK in it. The Compose/SwiftUI shell hands
+; it JSON and takes JSON back — see docs/native/rescope.md.
+;
+; Mobile renderer, because the target device is a low-end Android tablet.
+
+config_version=5
+
+[application]
+
+config/name="Times Table Tradies"
+config/description="City, characters and games. Embedded in the native shell."
+config/features=PackedStringArray("4.7", "Mobile")
+
+[rendering]
+
+renderer/rendering_method="mobile"
+renderer/rendering_method.mobile="mobile"
+textures/vram_compression/import_etc2_astc=true
+
+[physics]
+
+common/enable_pause_aware_picking=true

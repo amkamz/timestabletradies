@@ -1,0 +1,53 @@
+{
+  "_comment": "Everything the code needs that cannot be read off a mesh. No prices — the server owns the catalogue. See docs/native/godot-asset-contract.md §11.",
+
+  "source": "placeholder",
+  "cell_size": 1.0,
+
+  "city_pieces": {
+    "ground_grass": {
+      "footprint": [1, 1],
+      "category": "ground"
+    },
+    "road_straight": {
+      "footprint": [1, 1],
+      "category": "road",
+      "connects": ["n", "s"]
+    },
+    "road_corner": {
+      "footprint": [1, 1],
+      "category": "road",
+      "connects": ["n", "e"]
+    },
+    "road_t": {
+      "footprint": [1, 1],
+      "category": "road",
+      "connects": ["n", "e", "s"]
+    },
+    "road_cross": {
+      "footprint": [1, 1],
+      "category": "road",
+      "connects": ["n", "e", "s", "w"]
+    },
+    "build_workshop": {
+      "footprint": [1, 1],
+      "category": "building",
+      "levels": 3,
+      "doors": [{ "edge": "s" }]
+    },
+    "build_yard": {
+      "footprint": [2, 1],
+      "category": "building",
+      "levels": 2,
+      "doors": [{ "edge": "s" }]
+    },
+    "build_depot": {
+      "footprint": [2, 2],
+      "category": "building",
+      "levels": 3,
+      "doors": [{ "edge": "s" }]
+    }
+  },
+
+  "material_roles": {}
+}

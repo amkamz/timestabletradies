@@ -1,0 +1,7 @@
+# Godot 4 import cache and editor state. Regenerated on open; never committed.
+.godot/
+/android/
+export_presets.cfg
+
+# Imported asset binaries
+*.import

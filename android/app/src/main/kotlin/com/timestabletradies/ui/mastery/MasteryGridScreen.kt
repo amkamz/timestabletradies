@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -19,6 +20,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Brush
@@ -37,7 +39,6 @@ import com.timestabletradies.core.designsystem.PopCard
 import com.timestabletradies.core.designsystem.PopGap
 import com.timestabletradies.core.designsystem.PopShadow
 import com.timestabletradies.core.designsystem.PopSize
-import com.timestabletradies.core.designsystem.PopStat
 import com.timestabletradies.core.designsystem.PopTokens
 import com.timestabletradies.core.designsystem.PopTone
 import com.timestabletradies.core.designsystem.PopType
@@ -46,6 +47,7 @@ import com.timestabletradies.core.designsystem.popSurface
 import com.timestabletradies.core.model.MasteryStage
 import com.timestabletradies.core.network.MasteryCell
 import com.timestabletradies.core.network.MasteryGrid
+import com.timestabletradies.core.network.StageCounts
 
 /**
  * G1 · The Mastery Grid — 144 facts, one cell each.
@@ -324,28 +326,51 @@ data class FactDetail(
     val correctInWindow: Int,
     val averageMs: Int,
     val lifetimeAttempts: Int,
+    /**
+     * Each attempt in the window, **oldest first**, so the strip reads left to
+     * right the way time does.
+     *
+     * The counts above answer "how many"; this answers "when". Two children on
+     * 80% are in completely different places if one missed four in a row last
+     * week and the other missed one this morning — and the strip is the only
+     * thing on the panel that can tell them apart.
+     */
+    val outcomes: List<Boolean> = emptyList(),
 ) {
     val accuracyPercent: Int?
         get() = if (attemptsInWindow == 0) null else correctInWindow * 100 / attemptsInWindow
+
+    val wrongInWindow: Int get() = attemptsInWindow - correctInWindow
 }
 
 /** Twenty attempts, so each one is worth exactly five percent. */
 const val MasteryWindow = 20
 
 /**
- * The bottom half: white card, three levels, one bright thing on it.
+ * The bottom panel — the merge (design `2a`, "Ticket + ticks").
  *
- * It used to be an ink slab carrying teal, yellow and white text on three
- * different dark wells, which gave five things the same weight and left the
- * child's actual question — *how am I going on this one?* — competing with its
- * own labels. The panel is now the app's ordinary white card, and the ranking
- * is done by size rather than by colour:
+ * A job ticket: a coloured header naming the state, the fact itself centred and
+ * large, the last twenty attempts as a strip of ticks, and one yellow button
+ * across the bottom. It sits above the nav bar and it is **always occupied** —
+ * an empty space under a grid a child has just tapped reads as the tap not
+ * working.
  *
- * 1. **the fact**, big and in ink — it is the thing being asked about
- * 2. **the three figures**, in one quiet sand well underneath
- * 3. **the button**, the only saturated colour in the box
+ * Two states, one shape. Tapping a square fills it with that fact; tapping the
+ * square again — or arriving fresh — shows the grid's own summary. Both have a
+ * header, a big number, a middle band and a button in the same places, so the
+ * panel changes contents rather than changing form.
  *
- * Yellow is left doing exactly one job, which is what makes it mean "press me".
+ * **What the strip adds over the old three-figure well.** Accuracy, average
+ * time and lifetime attempts all answered *how many*. None of them answered
+ * *when*, and two children sitting on 80% are in completely different places if
+ * one missed four in a row last week and the other missed one this morning. The
+ * strip is the only thing here that can tell them apart, which is why it took
+ * the room the three figures used to have.
+ *
+ * **No shadow on the card.** The design mock draws one, but this app spends the
+ * hard offset shadow on exactly one thing — "you can press this" — so the
+ * button below has it and the panel holding it does not (see the standing rule
+ * in `docs/native/README.md`). `popSurface` cannot draw one regardless.
  */
 @Composable
 private fun FactPanel(
@@ -358,110 +383,132 @@ private fun FactPanel(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .popSurface(fill = PopTokens.White, radius = PopTokens.RadiusMd)
-            .padding(horizontal = 14.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+            .popSurface(fill = PopTokens.White, radius = PopTokens.RadiusMd),
     ) {
         if (cell == null) {
-            val solid = grid.counts.gold + grid.counts.blue
-            Text("YOUR GRID", style = PopType.Small, color = PopTokens.Mud)
-            Row(
-                verticalAlignment = Alignment.Bottom,
-                horizontalArrangement = Arrangement.spacedBy(7.dp),
-                modifier = Modifier.semantics(mergeDescendants = true) {
-                    contentDescription = "$solid of ${grid.total} facts solid"
-                },
-            ) {
-                Text("$solid", style = PopType.DisplayLarge, color = PopTokens.Ink)
-                Text(
-                    text = "of ${grid.total} facts solid",
-                    style = PopType.Body,
-                    color = PopTokens.Mud,
-                    modifier = Modifier.padding(bottom = 5.dp),
-                )
-            }
-            Text(
-                "Tap any square to see how it's going.",
-                style = PopType.Small,
-                color = PopTokens.Mud,
+            GridSummary(grid = grid, unlockedTables = unlockedTables, onPractise = onPractise)
+        } else {
+            FactTicket(
+                cell = cell,
+                detail = detail,
+                grid = grid,
+                unlockedTables = unlockedTables,
+                onPractise = onPractise,
             )
-            return@Column
         }
+    }
+}
 
-        val stage = cell.stage.toStage()
+/* ------------------------------------------------------------ the header bar */
 
-        // Level one, part one: what state this square is in, said in words as
-        // well as in colour.
+/**
+ * The strip across the top of the panel: what this is, and one figure.
+ *
+ * Carries the colour, so the panel announces the tapped square's state before
+ * any of it is read. The ink rule underneath is what stops a saturated bar from
+ * floating off a white card.
+ */
+@Composable
+private fun PanelHeader(
+    title: String,
+    trailing: String,
+    fill: Color,
+    content: Color,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(PanelHeaderHeight)
+            .background(fill)
+            .padding(horizontal = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Text(
+            text = title,
+            style = PopType.Small.copy(fontSize = 12.sp, letterSpacing = 1.4.sp),
+            color = content,
+        )
+        Text(
+            text = trailing,
+            style = PopType.Small.copy(fontSize = 9.5.sp, letterSpacing = 1.sp),
+            color = content.copy(alpha = 0.72f),
+        )
+    }
+}
+
+/** The ink rule under the header. Not a shadow — a border the card shares. */
+@Composable
+private fun HeaderRule() {
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .height(3.dp)
+            .background(PopTokens.Ink),
+    )
+}
+
+private val PanelHeaderHeight = 34.dp
+
+/* ---------------------------------------------------------- selected: a fact */
+
+@Composable
+private fun FactTicket(
+    cell: MasteryCell,
+    detail: FactDetail?,
+    grid: MasteryGrid,
+    unlockedTables: List<Int>,
+    onPractise: (List<Int>) -> Unit,
+) {
+    val stage = cell.stage.toStage()
+
+    // The header takes the colour of the square that was tapped, not a lighter
+    // relative of it. A child who pressed a dark blue cell and got a pale blue
+    // panel would have to work out that the two are the same thing.
+    PanelHeader(
+        title = stage.headline(),
+        trailing = "FACT ${factIndex(cell, grid.maxFactor)}/${grid.total}",
+        fill = stage.fill(),
+        content = stage.onFill(),
+    )
+    HeaderRule()
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 14.dp),
+    ) {
+        // The fact, centred and the largest thing in the box. The product
+        // carries the weight — "7 × 8 =" is the question, 56 is what the child
+        // came here to look at.
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .semantics(mergeDescendants = true) { contentDescription = stage.label },
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Box(
-                modifier = Modifier
-                    .width(18.dp)
-                    .aspectRatio(1f)
-                    .background(stage.fill(), RoundedCornerShape(4.dp))
-                    .border(2.dp, PopTokens.Ink, RoundedCornerShape(4.dp)),
-            )
-            Text(
-                text = stage.label.uppercase(),
-                style = PopType.Small.copy(fontWeight = FontWeight.Bold),
-                color = PopTokens.Mud,
-            )
-        }
-
-        // Level one, part two: the fact itself, and the biggest thing in the
-        // box. The product carries the weight — "7 ×  8 =" is the question, 56
-        // is what the child came here to look at.
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
+                .padding(top = 2.dp, bottom = 10.dp)
                 .semantics(mergeDescendants = true) {
                     contentDescription = "${cell.a} times ${cell.b} equals ${cell.a * cell.b}"
                 },
+            horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.Bottom,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text(
                 text = "${cell.a} × ${cell.b} =",
-                style = PopType.Title,
-                color = PopTokens.Mud,
-                modifier = Modifier.padding(bottom = 4.dp),
+                style = PopType.Title.copy(fontSize = 26.sp),
+                color = PopTokens.Ink,
+                modifier = Modifier.padding(end = 9.dp, bottom = 3.dp),
             )
-            Text("${cell.a * cell.b}", style = PopType.DisplayLarge, color = PopTokens.Ink)
+            Text(
+                text = "${cell.a * cell.b}",
+                style = PopType.DisplayLarge.copy(fontSize = 40.sp),
+                color = PopTokens.Ink,
+            )
         }
 
-        // Level two: one well, three figures, hairlines between them. Three
-        // separate boxes made three objects out of what is one read-out.
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(PopTokens.SandPanel, RoundedCornerShape(PopTokens.RadiusSm))
-                .padding(vertical = 9.dp),
-            verticalAlignment = Alignment.CenterVertically,
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.Center,
         ) {
-            DetailStat(
-                value = detail?.accuracyPercent?.let { "$it%" } ?: "—",
-                label = "LAST $MasteryWindow",
-                modifier = Modifier.weight(1f),
-            )
-            StatDivider()
-            DetailStat(
-                value = detail?.averageMs
-                    ?.takeIf { it > 0 }
-                    ?.let { "${it / 100 / 10.0}s" } ?: "—",
-                label = "AVG TIME",
-                modifier = Modifier.weight(1f),
-            )
-            StatDivider()
-            DetailStat(
-                value = "${detail?.lifetimeAttempts ?: cell.attempts}",
-                label = "ATTEMPTS",
-                modifier = Modifier.weight(1f),
-            )
+            LastTwenty(detail)
         }
 
         if (cell.due) {
@@ -472,14 +519,13 @@ private fun FactPanel(
                 "Due for a check-in — worth another go.",
                 style = PopType.Small,
                 color = PopTokens.TealDeep,
+                modifier = Modifier.padding(bottom = 8.dp),
             )
         }
 
-        Box(Modifier.weight(1f))
-
-        // Level three. Straight from "I'm bad at this" to practising it —
-        // Toolbox Time is the untimed mode, which is the right place to send
-        // someone who just found a red square and felt something about it.
+        // Straight from "I'm bad at this" to practising it. Toolbox Time is the
+        // untimed mode, which is the right place to send someone who has just
+        // found a red square and felt something about it.
         val tables = practiceTablesFor(cell, unlockedTables)
         PopButton(
             text = "PRACTISE THIS",
@@ -493,34 +539,327 @@ private fun FactPanel(
     }
 }
 
+/**
+ * Twenty ticks, oldest on the left.
+ *
+ * Padded from the left when there are fewer than twenty attempts, so the newest
+ * answer is always hard against the right-hand edge and the strip fills toward
+ * the middle as a child works. Growing from the left instead would move every
+ * tick every time and make the shape impossible to recognise between visits.
+ *
+ * The ticks are decorative to a screen reader — the row above already says
+ * "eighteen right, two wrong", and twenty unlabelled squares after it would be
+ * twenty pieces of noise.
+ */
 @Composable
-private fun DetailStat(
-    value: String,
-    label: String,
-    modifier: Modifier = Modifier,
-) {
-    PopStat(
-        value = value,
-        label = label,
-        // One colour for all three: they are the same kind of fact about the
-        // same square, and colour-coding them made the panel look like three
-        // unrelated scores.
-        valueColor = PopTokens.Ink,
-        labelColor = PopTokens.Mud,
-        modifier = modifier,
+private fun LastTwenty(detail: FactDetail?) {
+    val outcomes = detail?.outcomes.orEmpty().takeLast(MasteryWindow)
+    val blanks = MasteryWindow - outcomes.size
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.Bottom,
+    ) {
+        Text(
+            text = "LAST $MasteryWindow TICKETS",
+            style = PopType.Small.copy(fontSize = 9.5.sp, letterSpacing = 1.2.sp),
+            color = PopTokens.Mud,
+        )
+        Text(
+            text = if (detail == null || detail.attemptsInWindow == 0) {
+                "NOT TRIED YET"
+            } else {
+                "${detail.correctInWindow} RIGHT · ${detail.wrongInWindow} WRONG"
+            },
+            style = PopType.Small.copy(fontSize = 11.sp),
+            color = when {
+                detail == null || detail.attemptsInWindow == 0 -> PopTokens.Mud
+                detail.wrongInWindow == 0 -> PopTokens.GradeGold
+                else -> PopTokens.Ink
+            },
+        )
+    }
+
+    PopGap(5.dp)
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(26.dp)
+            .semantics(mergeDescendants = true) {
+                contentDescription = if (detail == null || detail.attemptsInWindow == 0) {
+                    "No attempts yet"
+                } else {
+                    "Last ${detail.attemptsInWindow}: " +
+                        "${detail.correctInWindow} right, ${detail.wrongInWindow} wrong"
+                }
+            },
+        horizontalArrangement = Arrangement.spacedBy(3.dp),
+    ) {
+        repeat(blanks) {
+            Tick(fill = PopTokens.SandFill, modifier = Modifier.weight(1f))
+        }
+        outcomes.forEach { correct ->
+            Tick(
+                fill = if (correct) PopTokens.GradeGold else PopTokens.Red,
+                modifier = Modifier.weight(1f),
+            )
+        }
+    }
+
+    PopGap(4.dp)
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Text("OLDEST", style = PopType.Small.copy(fontSize = 9.sp), color = PopTokens.SandPale)
+        Text("NEWEST", style = PopType.Small.copy(fontSize = 9.sp), color = PopTokens.SandPale)
+    }
+}
+
+@Composable
+private fun Tick(fill: Color, modifier: Modifier = Modifier) {
+    Box(
+        modifier
+            .fillMaxHeight()
+            .background(fill, RoundedCornerShape(3.dp)),
     )
 }
 
-/** The hairline between two figures in the stat well. */
+/* ------------------------------------------------------ nothing selected yet */
+
+/**
+ * The resting state: the whole grid in one bar.
+ *
+ * Answers the question a child asks before they have tapped anything — *how am
+ * I doing overall?* — with the same shape the fact ticket uses, so the panel
+ * reads as one object changing contents rather than two panels swapping places.
+ *
+ * The bar is proportional and shows **all five stages**, not the four the mock
+ * drew. Gold is the stage most of a working grid sits in for months; folding it
+ * into "solid" would hide the difference between a fact that is fast and one
+ * that has also survived a fortnight away from it.
+ */
 @Composable
-private fun StatDivider() {
-    Box(
-        Modifier
-            .width(1.dp)
-            .height(30.dp)
-            .background(PopTokens.SandPale),
+private fun GridSummary(
+    grid: MasteryGrid,
+    unlockedTables: List<Int>,
+    onPractise: (List<Int>) -> Unit,
+) {
+    val counts = grid.counts
+    val solid = counts.gold + counts.blue
+
+    PanelHeader(
+        title = "YOUR GRID",
+        trailing = "$solid/${grid.total} SOLID",
+        fill = PopTokens.TealDeep,
+        content = PopTokens.White,
     )
+    HeaderRule()
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 14.dp),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 2.dp, bottom = 10.dp)
+                .semantics(mergeDescendants = true) {
+                    contentDescription = "$solid of ${grid.total} facts solid"
+                },
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.Bottom,
+        ) {
+            Text(
+                text = "$solid",
+                style = PopType.DisplayLarge.copy(fontSize = 40.sp),
+                color = PopTokens.Ink,
+            )
+            Text(
+                text = "facts solid",
+                style = PopType.Title.copy(fontSize = 21.sp),
+                color = PopTokens.Mud,
+                modifier = Modifier.padding(start = 9.dp, bottom = 3.dp),
+            )
+        }
+
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Text(
+                text = "WHOLE GRID",
+                style = PopType.Small.copy(fontSize = 9.5.sp, letterSpacing = 1.2.sp),
+                color = PopTokens.Mud,
+            )
+
+            PopGap(5.dp)
+
+            StageBar(counts = counts, total = grid.total)
+
+            PopGap(7.dp)
+
+            StageLegend(counts = counts)
+        }
+
+        // Adaptive practice, not a table picker: the child has not named a fact,
+        // so the honest answer to "what should I do" is whatever the grid says
+        // is weakest.
+        PopButton(
+            text = "PRACTISE WEAK SPOTS",
+            onClick = { onPractise(weakestTables(grid, unlockedTables)) },
+            tone = PopTone.Yellow,
+            size = PopSize.Large,
+            fullWidth = true,
+            shadow = PopShadow.Large,
+        )
+    }
 }
+
+/** One bar, five segments, in ladder order. Zero-width stages are dropped. */
+@Composable
+private fun StageBar(counts: StageCounts, total: Int) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(26.dp)
+            .clip(RoundedCornerShape(5.dp))
+            .semantics(mergeDescendants = true) {
+                contentDescription = "Of $total facts: " +
+                    "${counts.blue} locked in, ${counts.gold} solid, " +
+                    "${counts.silver} getting there, ${counts.bronze} needing work, " +
+                    "${counts.none} not tried"
+            },
+    ) {
+        StageBarOrder.forEach { stage ->
+            val share = counts.of(stage)
+            if (share > 0) {
+                Box(
+                    Modifier
+                        .weight(share.toFloat())
+                        .fillMaxHeight()
+                        .background(stage.fill()),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun StageLegend(counts: StageCounts) {
+    // Two rows of the ladder rather than one wrapping line, so the swatches
+    // stay in columns a child can compare down as well as across.
+    Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+        StageBarOrder.chunked(3).forEach { row ->
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                row.forEach { stage ->
+                    LegendEntry(stage = stage, count = counts.of(stage))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun LegendEntry(stage: MasteryStage, count: Int) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(5.dp),
+        modifier = Modifier.semantics(mergeDescendants = true) {
+            contentDescription = "$count ${stage.shortLabel()}"
+        },
+    ) {
+        Box(
+            Modifier
+                .width(11.dp)
+                .aspectRatio(1f)
+                .background(stage.fill(), RoundedCornerShape(3.dp)),
+        )
+        Text(
+            text = "$count ${stage.shortLabel()}",
+            style = PopType.Small.copy(fontSize = 10.5.sp),
+            color = PopTokens.Mud,
+        )
+    }
+}
+
+/** Best first: a child should read their own grid as a thing they are winning. */
+private val StageBarOrder = listOf(
+    MasteryStage.BLUE,
+    MasteryStage.GOLD,
+    MasteryStage.SILVER,
+    MasteryStage.BRONZE,
+    MasteryStage.NONE,
+)
+
+private fun StageCounts.of(stage: MasteryStage): Int = when (stage) {
+    MasteryStage.NONE -> none
+    MasteryStage.BRONZE -> bronze
+    MasteryStage.SILVER -> silver
+    MasteryStage.GOLD -> gold
+    MasteryStage.BLUE -> blue
+}
+
+/**
+ * The header line for a stage.
+ *
+ * Names the colour as well as the meaning, because the child got here by
+ * tapping a coloured square and the panel has to confirm it read the right one.
+ */
+private fun MasteryStage.headline(): String = when (this) {
+    MasteryStage.NONE -> "GREY · NOT TRIED"
+    MasteryStage.BRONZE -> "RED · NEEDS WORK"
+    MasteryStage.SILVER -> "ORANGE · GETTING THERE"
+    MasteryStage.GOLD -> "GREEN · SOLID"
+    MasteryStage.BLUE -> "BLUE · LOCKED IN"
+}
+
+private fun MasteryStage.shortLabel(): String = when (this) {
+    MasteryStage.NONE -> "untried"
+    MasteryStage.BRONZE -> "to fix"
+    MasteryStage.SILVER -> "shaky"
+    MasteryStage.GOLD -> "solid"
+    MasteryStage.BLUE -> "locked in"
+}
+
+/** Where this fact sits in the grid, reading across then down. */
+private fun factIndex(cell: MasteryCell, maxFactor: Int): Int =
+    (cell.a - 1) * maxFactor + cell.b
+
+/**
+ * The tables carrying the most unfinished facts.
+ *
+ * Takes the two weakest rather than everything unlocked: a practice run over
+ * eleven tables is the same run the child could already have started from the
+ * shed, and would make the button a long way round to Toolbox Time. Falls back
+ * to the whole unlocked set when the grid is complete enough to have no weak
+ * spots left, which is the one time "practise everything" is the right answer.
+ */
+private fun weakestTables(grid: MasteryGrid, unlockedTables: List<Int>): List<Int> {
+    if (unlockedTables.isEmpty()) return emptyList()
+
+    val unfinishedPerTable = unlockedTables.associateWith { table ->
+        grid.cells.count { cell ->
+            (cell.a == table || cell.b == table) &&
+                cell.stage.toStage().ordinal < MasteryStage.GOLD.ordinal
+        }
+    }
+
+    val weakest = unfinishedPerTable
+        .filterValues { it > 0 }
+        .entries
+        .sortedByDescending { it.value }
+        .take(2)
+        .map { it.key }
+        .sorted()
+
+    return weakest.ifEmpty { unlockedTables }
+}
+
 
 /* ------------------------------------------------------------------ merging */
 

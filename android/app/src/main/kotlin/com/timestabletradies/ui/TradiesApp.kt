@@ -508,6 +508,10 @@ fun TradiesApp(
                                                 rows.sumOf { r -> r.elapsedMs } / rows.size
                                             },
                                             lifetimeAttempts = cell.attempts,
+                                            // `recentAnswers` orders newest
+                                            // first; the strip reads left to
+                                            // right the way time does.
+                                            outcomes = rows.map { r -> r.correct }.reversed(),
                                         )
                                     }
                                     .onFailure { Log.w("TradiesApp", "answer log failed", it) }

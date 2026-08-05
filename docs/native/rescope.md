@@ -272,7 +272,7 @@ Solo developer. Estimates are rough and the Godot phases are the least certain.
 
 | Phase | Work | Est. |
 |---|---|---|
-| **0** | Cut the mode list. Registry edit, regroup the shed, make `openMode`'s fallthrough honest. | ½ wk |
+| **0** | ✅ **Done.** `RETIRED_MODES` and `ModeSection` in `modes.ts`; `openMode` pushes `NotOnAndroidYet`; `run-start` 501s on a mode it cannot build; `streak.ts` and `city-level.ts` written and tested; Android's fifth shop category restored. | ½ wk |
 | **1** | One write path. `onboarding-signup` first, then `purchaseItem`/`equipItem`, then crew, boss, sticker. Delete `finishRun` from `actions/play.ts` (§1.2). | 2–3 wks |
 | **2** | Student JWT claim + RLS rewrite (§0.5). | 1 wk |
 | **3** | Board delivery for the three games (§1.3). `QUESTION_COUNT`, `TIMER_SECONDS`, the `content` contract. | 1 wk |

@@ -146,6 +146,22 @@ Deno.serve(async (req) => {
     return json({ error: availability.reason, locked: true }, 403);
   }
 
+  // Refuse a mode this endpoint cannot actually build.
+  //
+  // Everything below generates a *question sequence*. The puzzle and race
+  // modes need a `content` board instead (§1.3), which is not written yet —
+  // and until this check existed they fell through `QUESTION_COUNT[mode] ?? 10`
+  // and were handed ten plain questions. So Cable Run, Ute Rally and Floor Plan
+  // were served as the same generic drill, under their own names, with a 200
+  // and no complaint from either side. A 501 is the honest answer: the mode is
+  // real and permitted, this endpoint just cannot serve it yet.
+  if (!(mode in QUESTION_COUNT)) {
+    return json(
+      { error: `${mode} needs a delivered board, which this endpoint cannot build yet`, unbuilt: true },
+      501,
+    );
+  }
+
   if (tables.length === 0) return json({ error: "No tables unlocked" }, 403);
 
   /* ---- adaptive selection ------------------------------------------------ */
@@ -204,6 +220,9 @@ Deno.serve(async (req) => {
     tables: pool,
     divisionUnlocked,
     operation,
+    // Guarded by the `mode in QUESTION_COUNT` check above, so the fallback is
+    // unreachable — kept only so a typo in the table cannot produce a run of
+    // zero questions.
     count: QUESTION_COUNT[mode] ?? 10,
     withChoices: false,
     weightFor,

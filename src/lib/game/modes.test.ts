@@ -10,8 +10,13 @@ import assert from "node:assert/strict";
 import {
   MODE_REQUIREMENTS,
   PRACTICE_MODES,
+  RETIRED_MODES,
+  SECTION_LABELS,
   availablePracticeModes,
+  isRetired,
   modeAvailability,
+  modeLabel,
+  practiceModesBySection,
   type UnlockState,
 } from "./modes";
 import {
@@ -101,24 +106,73 @@ test("the tutorial zone alone opens the core loop and nothing else", () => {
   assert.equal(modeAvailability("scaffold", unlock).playable, false);
 });
 
-test("the free tier reaches every mode at three zones or under", () => {
+test("the free tier reaches every offered mode at three zones or under", () => {
   const free = afterZones(FREE_ZONE_COUNT, [2]);
-  const reachable: RunMode[] = [
-    "job",
-    "garage",
-    "toolbox",
-    "yard",
-    "inspection",
-    "scaffold",
-    "rally",
-    "crewrace",
-    "expo",
-    "challenge",
-    "cablerun",
-  ];
+  const reachable: RunMode[] = ["job", "garage", "toolbox", "yard", "rally", "crewrace", "cablerun"];
   for (const mode of reachable) {
     assert.equal(modeAvailability(mode, free).playable, true, `${mode} should be free`);
   }
+});
+
+/* ------------------------------------------------------------- retirement */
+
+test("a retired mode fails politely instead of throwing", () => {
+  // `run-start` looks the mode up before anything else, and an unknown key
+  // doesn't 404 — it throws inside the function and returns a 500. Retired
+  // modes therefore keep their requirement entry and refuse by name.
+  for (const mode of Object.keys(RETIRED_MODES) as RunMode[]) {
+    assert.ok(MODE_REQUIREMENTS[mode], `${mode} lost its requirement entry`);
+    const availability = modeAvailability(mode, afterZones(DEFAULT_UNLOCK_ORDER.length, [2, 3, 5]));
+    assert.equal(availability.playable, false, `${mode} is retired and must not be playable`);
+  }
+});
+
+test("retirement beats every threshold, however much a student has unlocked", () => {
+  // Retired modes sit at low zone counts, so a check ordered the other way
+  // round would quietly hand them back to anyone past three zones.
+  const everything = afterZones(DEFAULT_UNLOCK_ORDER.length, [2, 3, 5, 10]);
+  const availability = modeAvailability("inspection", everything);
+  assert.equal(availability.playable, false);
+  if (availability.playable) return;
+  assert.match(availability.reason, /closed down/i);
+});
+
+test("nothing retired is still on offer", () => {
+  for (const mode of PRACTICE_MODES) {
+    assert.equal(isRetired(mode.key), false, `${mode.key} is retired but still in the shed`);
+  }
+});
+
+test("every retired mode keeps its label so old runs still read", () => {
+  // `runs.mode` is text with a check constraint, not an enum — the rows are
+  // still there and the parent dashboard still lists them.
+  for (const mode of Object.keys(RETIRED_MODES) as RunMode[]) {
+    assert.notEqual(modeLabel(mode), mode, `${mode} would render as a raw database key`);
+  }
+});
+
+/* ---------------------------------------------------------------- sections */
+
+test("every offered mode sits in a section, and every section has modes", () => {
+  const groups = practiceModesBySection();
+  assert.ok(groups.length > 0);
+  assert.equal(
+    groups.reduce((n, g) => n + g.modes.length, 0),
+    PRACTICE_MODES.length,
+    "a mode fell out of its section",
+  );
+  for (const group of groups) {
+    assert.ok(SECTION_LABELS[group.section], `${group.section} has no label`);
+    assert.ok(group.modes.length > 0, `${group.section} is empty and should not render`);
+  }
+});
+
+test("The Big Job is a run mode but never a card", () => {
+  // 100 questions shared with a teacher is an assessment that arrives, not a
+  // way to practise picked off a list.
+  assert.ok(MODE_REQUIREMENTS.bigjob, "bigjob is still a run mode");
+  assert.equal(isRetired("bigjob"), false, "it is not retired, just not offered");
+  assert.ok(!PRACTICE_MODES.some((m) => m.key === "bigjob"), "bigjob is not in the shed");
 });
 
 test("the modes that need breadth stay shut on the free tier", () => {

@@ -153,6 +153,16 @@ object Storyboard {
         ShopItem("ute-teal", "Teal Tradie", ShopCategory.Rides, 900),
         ShopItem("ute-flames", "Flame Job", ShopCategory.Rides, 1400),
         ShopItem("ute-vintage", "Restored Classic", ShopCategory.Rides, 2200),
+
+        // Accessories. Present in `shop.ts` all along; unreachable here until
+        // Android grew the fifth category to match.
+        ShopItem("acc-sunnies", "Site Sunnies", ShopCategory.Extras, 90),
+        ShopItem("acc-gloves", "Grip Gloves", ShopCategory.Extras, 110),
+        ShopItem("acc-knee-pads", "Knee Pads", ShopCategory.Extras, 130),
+        ShopItem("acc-earmuffs", "Ear Muffs", ShopCategory.Extras, 140),
+        ShopItem("acc-boots", "Steel Caps", ShopCategory.Extras, 160),
+        ShopItem("acc-headtorch", "Head Torch", ShopCategory.Extras, 240),
+        ShopItem("acc-thermos", "Smoko Thermos", ShopCategory.Extras, 300),
     )
 
     /* ---------------------------------------------------------- word problems */

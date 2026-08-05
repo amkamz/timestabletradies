@@ -134,6 +134,18 @@ sealed interface FullRoute {
 
     data object Results : FullRoute
 
+    /**
+     * A mode the server offers that this client cannot yet play.
+     *
+     * The alternative was what used to happen: an unhandled key fell through to
+     * a plain keypad run, and the server served ten generic questions for any
+     * mode it had no count for. So Cable Run, Ute Rally and Scaffold Stack were
+     * one identical drill under three names and three colours, with nothing
+     * anywhere saying so. Saying "not yet" is worth more than quietly serving
+     * the wrong game.
+     */
+    data class NotOnAndroidYet(val modeName: String) : FullRoute
+
     /* modes with their own intro */
     data object Garage : FullRoute
     data object Yard : FullRoute

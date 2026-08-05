@@ -32,7 +32,9 @@ Part 1 is under way. What is written and tested in the repo today:
 | Section | Status |
 |---|---|
 | §1.7 ×1 tutorial zone | ✅ `zones.ts`, migration `0003` |
-| §1.8 Mode unlocks | ✅ `modes.ts` — `MODE_REQUIREMENTS`, `modeAvailability` |
+| §1.8 Mode unlocks | ✅ `modes.ts` — `MODE_REQUIREMENTS`, `modeAvailability`, and the rescope's cut applied: `RETIRED_MODES`, `ModeSection`, `practiceModesBySection` |
+| Streak tiers and points | ✅ `streak.ts` — tier 0–10 as the earn rate, points as the balance. Needs a schema column before it can be stored |
+| City level and XP | ✅ `city-level.ts` — replaces the house percentage and Trade Rank. Needs a schema column, and the UI still shows rank |
 | §1.9 Difficulty-weighted rewards | ✅ `difficulty.ts`, wired through `questions.ts` and `finishRun` |
 | §1.6 Entitlement model | ✅ `entitlement.ts`, migration `0004` |
 | §1.10 Gate enforcement | ✅ `run-start` refuses locked modes and unentitled tables; `run-finish` re-checks |
@@ -44,7 +46,7 @@ Part 1 is under way. What is written and tested in the repo today:
 | §2.3 Toolbox Pop in Compose | ✅ Primitives, hard shadows, Titan One / Nunito / Space Mono bundled |
 | §2.4 Navigation | ✅ Session-gated, tabbed shell + full-screen stack, `/cheer` and `/join` deep links registered |
 | §2.5 Screens | ✅ All 38 mobile screens of the storyboard (A–G, I). Roughly half render live data; the rest are marked stubs — see below |
-| §2.6 The game modes | ⬜ **Now three, in Godot** ([`rescope.md`](rescope.md)). None exist on Android: `openMode` falls through to a keypad drill and `run-start` serves 10 plain questions, so Cable Run, Rally, Tool-Off, Scaffold and Floor Plan are currently the same run under five names |
+| §2.6 The game modes | ⚠️ **Now three, in Godot** ([`rescope.md`](rescope.md)). Still unbuilt, but no longer *silently* unbuilt: `openMode` pushes `NotOnAndroidYet` instead of a keypad drill, and `run-start` returns 501 for any mode missing from `QUESTION_COUNT` rather than serving ten generic questions |
 | §2.7 Accessibility | ⚠️ Reduced motion, text scale, timer mode, read-aloud and colourblind grid shapes work. Dyslexic font not built. **The shapes switch currently rides on `high_contrast`** — it needs its own column at the next migration |
 | §2.8–2.9 Offline, billing | ⬜ Not started |
 | Godot layer | ⬜ Not started — character renderer + the three games ([`rescope.md`](rescope.md)). Integration spike first |

@@ -103,6 +103,33 @@ export const MODE_REQUIREMENTS: Record<RunMode, ModeRequirement> = {
   bigjob: { zones: 6 },
 };
 
+/* ---------------------------------------------------------- retired modes */
+
+/**
+ * Modes the game no longer offers, and what absorbed each one
+ * (docs/native/rescope.md, docs/native/vision.md).
+ *
+ * They keep their `MODE_LABELS` entry and their place in the `runs_mode_check`
+ * constraint, so historical runs still render and still count toward a child's
+ * totals. Retiring a mode is a registry edit, not a migration.
+ *
+ * They also keep their `MODE_REQUIREMENTS` entry, which looks redundant until
+ * you notice that `run-start` looks the mode up before anything else and an
+ * unknown key doesn't 404 — it throws inside the function and returns a 500.
+ * A retired mode has to fail *politely*.
+ */
+export const RETIRED_MODES: Partial<Record<RunMode, string>> = {
+  inspection: "The Yard, which was the same test with different numbers",
+  scaffold: "Ute Rally — and it was the one mode a modified client could never lose",
+  tooloff: "Floor Plan, which teaches factor pairs earlier and better",
+  expo: "a leaderboard screen rather than a run of its own",
+  challenge: "Crew Race, as its asynchronous form",
+};
+
+export function isRetired(mode: RunMode): boolean {
+  return RETIRED_MODES[mode] !== undefined;
+}
+
 export type UnlockState = {
   tables: number[];
   divisionUnlocked: number[];
@@ -121,6 +148,17 @@ export type ModeAvailability =
  */
 export function modeAvailability(mode: RunMode, unlock: UnlockState): ModeAvailability {
   const requirement = MODE_REQUIREMENTS[mode];
+
+  // Checked before the thresholds, so a retired mode reads as closed rather
+  // than as something to work toward. Nothing offers these any more, but a
+  // stale client or an old deep link can still ask for one.
+  if (isRetired(mode)) {
+    return {
+      playable: false,
+      reason: "This job's been closed down",
+      requirement,
+    };
+  }
 
   // ×1 counts here: it is a multiplication fact and a zone like any other.
   if (unlock.tables.length < requirement.zones) {
@@ -152,8 +190,27 @@ export function availablePracticeModes(unlock: UnlockState) {
   }));
 }
 
+/**
+ * Which part of the shed a mode sits in.
+ *
+ * The count of modes was never the real problem — the trouble was that they
+ * were not all on the same level and were shown as though they were. Ten cards
+ * in one flat list, some of them daily assignments, some practice, some games,
+ * some social. A seven-year-old cannot tell "The Garage" from "The Yard" from
+ * "Toolbox Time" by name, ever, so the section header has to carry the meaning
+ * the trade names never could.
+ */
+export type ModeSection = "practice" | "play" | "multiplayer";
+
+export const SECTION_LABELS: Record<ModeSection, string> = {
+  practice: "Practice",
+  play: "Play",
+  multiplayer: "Multiplayer",
+};
+
 export type PracticeMode = {
   key: RunMode;
+  section: ModeSection;
   href: string;
   name: string;
   /** One line under the name on the hub card. */
@@ -165,53 +222,51 @@ export type PracticeMode = {
 };
 
 /**
- * C2 · The training shed, in the order it's offered. Order is deliberate:
- * the adaptive mode first, the ranked one second, and the endless one last —
- * it's the one that eats a session if you let it.
+ * C2 · The training shed, grouped and in the order it's offered.
+ *
+ * Two things are deliberately *not* here. **The Big Job** left: 100 questions
+ * shared with a teacher is an assessment that arrives monthly, not something
+ * picked from a list of ways to practise. And the five retired modes above are
+ * gone entirely.
+ *
+ * **The Garage is still its own card.** The plan is for it to become Toolbox
+ * Time's default — "smart practice, unless you opt out and pick your own" —
+ * but that needs the Toolbox screen to grow the toggle first. Removing the
+ * card before its replacement is wired would make adaptive practice
+ * unreachable, which is exactly the silent degradation this rescope exists to
+ * stop. It merges when the toggle lands, not before.
  */
 export const PRACTICE_MODES: readonly PracticeMode[] = [
   {
     key: "garage",
+    section: "practice",
     href: "/play/modes/garage",
     name: "The Garage",
-    blurb: "Smart practice · 10 coins / correct",
+    blurb: "Smart practice · picks your weak spots",
     tone: "bg-teal text-white",
     sub: "text-teal-mist",
   },
   {
-    key: "yard",
-    href: "/play/modes/yard",
-    name: "The Yard",
-    blurb: "Speed test → your Trade Rank",
-    tone: "bg-white text-ink",
-    sub: "text-mud",
-  },
-  {
-    key: "inspection",
-    href: "/play/modes/inspection",
-    name: "Site Inspection",
-    blurb: "25 questions · 6s each · no coasting",
-    tone: "bg-white text-ink",
-    sub: "text-mud",
-  },
-  {
     key: "toolbox",
+    section: "practice",
     href: "/play/modes/toolbox",
     name: "Toolbox Time",
-    blurb: "Relaxed · no timer · you choose the mix",
+    blurb: "No timer · you choose the mix",
     tone: "bg-white text-ink",
     sub: "text-mud",
   },
   {
-    key: "scaffold",
-    href: "/play/modes/scaffold",
-    name: "Scaffold Stack",
-    blurb: "Endless · stack it high without toppling",
-    tone: "bg-ink text-white",
-    sub: "text-white/70",
+    key: "yard",
+    section: "play",
+    href: "/play/modes/yard",
+    name: "The Yard",
+    blurb: "Speed test · how fast can you go?",
+    tone: "bg-white text-ink",
+    sub: "text-mud",
   },
   {
     key: "cablerun",
+    section: "play",
     href: "/play/modes/cable-run",
     name: "Cable Run",
     blurb: "Puzzle · no timer · route the cable home",
@@ -219,23 +274,8 @@ export const PRACTICE_MODES: readonly PracticeMode[] = [
     sub: "text-white/75",
   },
   {
-    key: "tooloff",
-    href: "/play/modes/tool-off",
-    name: "The Tool-Off",
-    blurb: "Duel · build the number they call",
-    tone: "bg-orange text-white",
-    sub: "text-white/75",
-  },
-  {
-    key: "floorplan",
-    href: "/play/modes/floor-plan",
-    name: "Floor Plan",
-    blurb: "Puzzle · no timer · tile the room exactly",
-    tone: "bg-teal text-white",
-    sub: "text-teal-mist",
-  },
-  {
     key: "rally",
+    section: "play",
     href: "/play/modes/rally",
     name: "Ute Rally",
     blurb: "Race · sealed road or the dirt shortcut",
@@ -243,11 +283,32 @@ export const PRACTICE_MODES: readonly PracticeMode[] = [
     sub: "text-amber-deep",
   },
   {
-    key: "bigjob",
-    href: "/play/modes/big-job",
-    name: "The Big Job",
-    blurb: "Monthly · 100 Q / 5 min · shared to teacher",
+    key: "floorplan",
+    section: "play",
+    href: "/play/modes/floor-plan",
+    name: "Floor Plan",
+    blurb: "Puzzle · no timer · tile the room exactly",
+    tone: "bg-teal text-white",
+    sub: "text-teal-mist",
+  },
+  {
+    key: "crewrace",
+    section: "multiplayer",
+    href: "/play/crew/race",
+    name: "Crew Race",
+    blurb: "Race your crew · bots fill the empty seats",
     tone: "bg-red text-white",
     sub: "text-red-tint",
   },
 ] as const;
+
+/** The shed renders section by section, skipping any that ends up empty. */
+export function practiceModesBySection(): { section: ModeSection; modes: PracticeMode[] }[] {
+  const order: ModeSection[] = ["practice", "play", "multiplayer"];
+  return order
+    .map((section) => ({
+      section,
+      modes: PRACTICE_MODES.filter((mode) => mode.section === section),
+    }))
+    .filter((group) => group.modes.length > 0);
+}

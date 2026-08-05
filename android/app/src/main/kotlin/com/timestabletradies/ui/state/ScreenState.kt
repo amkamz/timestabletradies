@@ -111,11 +111,20 @@ data class ZoneRow(
 
 /* -------------------------------------------------------------- the shop */
 
+/**
+ * Mirrors `ShopCategory` in `lib/game/shop.ts`, which is the authority.
+ *
+ * All five. `Extras` was missing for a while and the seven `acc-*` items were
+ * unreachable on Android as a result — buyable on the web, invisible here, and
+ * impossible to equip on either. A catalogue split across two clients has to
+ * agree on its own shape before anything else about it can be right.
+ */
 enum class ShopCategory(val label: String) {
     Hats("HATS"),
     Vests("VESTS"),
     Tools("TOOLS"),
     Rides("RIDES"),
+    Extras("EXTRAS"),
 }
 
 data class ShopItem(
@@ -133,6 +142,7 @@ enum class LockerSlot(val label: String) {
     Body("BODY"),
     Tools("TOOLS"),
     Ride("RIDE"),
+    Extras("EXTRAS"),
 }
 
 data class LockerItem(

@@ -54,6 +54,7 @@ import com.timestabletradies.ui.modes.GarageScreen
 import com.timestabletradies.ui.modes.ToolboxTimeScreen
 import com.timestabletradies.ui.modes.TradeRankScreen
 import com.timestabletradies.ui.modes.TradeZonesScreen
+import com.timestabletradies.ui.modes.NotOnAndroidYetScreen
 import com.timestabletradies.ui.modes.TrainingShedScreen
 import com.timestabletradies.ui.modes.toneForMode
 import com.timestabletradies.ui.onboarding.AddStudentScreen
@@ -917,6 +918,11 @@ fun TradiesApp(
             onBack = { pop() },
         )
 
+        is FullRoute.NotOnAndroidYet -> NotOnAndroidYetScreen(
+            modeName = route.modeName,
+            onBack = { pop() },
+        )
+
         FullRoute.MoreTrades -> MoreTradesScreen(onDone = { goToSite() })
 
         is FullRoute.Grandparent -> StickerSendScreen(
@@ -1101,32 +1107,32 @@ private fun ChromeKind.toChrome(route: FullRoute.Run): RunChrome = when (this) {
  * starts; the rest go straight to questions. The key comes from the server, so
  * an unknown one still plays rather than dead-ending.
  */
+/**
+ * Open a mode, or say plainly that this client can't.
+ *
+ * **The `else` branch is the important line in this function.** It used to push
+ * a generic keypad run for anything unhandled, and `run-start` serves ten plain
+ * questions for any mode missing from its `QUESTION_COUNT` — so Cable Run, Ute
+ * Rally, Floor Plan and Scaffold Stack were the same drill under four names,
+ * and nothing on either side errored. The mode list did not read as unclear by
+ * accident.
+ *
+ * Only keys with a real Android implementation are listed. Anything else is a
+ * mode the server offers and this client cannot honour, and the child is told
+ * so rather than handed a different game wearing its name.
+ */
 private fun openMode(mode: PracticeMode, push: (FullRoute) -> Unit) {
     when (mode.key) {
         "garage" -> push(FullRoute.Garage)
         "yard" -> push(FullRoute.Yard)
         "toolbox" -> push(FullRoute.Toolbox())
         "bigjob" -> push(FullRoute.BigJob)
-        "inspection" -> push(
-            FullRoute.Run(
-                modeKey = mode.key,
-                label = mode.name,
-                style = QuestionStyle.Tiles,
-                chrome = ChromeKind.Inspection,
-            ),
-        )
-
-        else -> push(
-            FullRoute.Run(
-                modeKey = mode.key,
-                label = mode.name,
-                style = QuestionStyle.Keypad,
-            ),
-        )
+        else -> push(FullRoute.NotOnAndroidYet(mode.name))
     }
 }
 
 private fun ShopCategory.toLockerSlot(): LockerSlot = when (this) {
+    ShopCategory.Extras -> LockerSlot.Extras
     ShopCategory.Hats -> LockerSlot.Head
     ShopCategory.Vests -> LockerSlot.Body
     ShopCategory.Tools -> LockerSlot.Tools

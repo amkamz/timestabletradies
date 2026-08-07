@@ -124,7 +124,11 @@ fun MasteryGridScreen(
                     FactPanel(
                         cell = selected,
                         detail = detail,
-                        grid = grid,
+                        // The merged map, not the raw response. The panel
+                        // describes the grid above it, and that grid draws all
+                        // 144 squares — see [countStages].
+                        cells = merged,
+                        maxFactor = grid.maxFactor,
                         unlockedTables = unlockedTables,
                         onPractise = onPractise,
                     )
@@ -376,7 +380,8 @@ const val MasteryWindow = 20
 private fun FactPanel(
     cell: MasteryCell?,
     detail: FactDetail?,
-    grid: MasteryGrid,
+    cells: Map<Pair<Int, Int>, MasteryCell>,
+    maxFactor: Int,
     unlockedTables: List<Int>,
     onPractise: (List<Int>) -> Unit,
 ) {
@@ -386,17 +391,58 @@ private fun FactPanel(
             .popSurface(fill = PopTokens.White, radius = PopTokens.RadiusMd),
     ) {
         if (cell == null) {
-            GridSummary(grid = grid, unlockedTables = unlockedTables, onPractise = onPractise)
+            GridSummary(
+                cells = cells,
+                maxFactor = maxFactor,
+                unlockedTables = unlockedTables,
+                onPractise = onPractise,
+            )
         } else {
             FactTicket(
                 cell = cell,
                 detail = detail,
-                grid = grid,
+                maxFactor = maxFactor,
                 unlockedTables = unlockedTables,
                 onPractise = onPractise,
             )
         }
     }
+}
+
+/**
+ * Stage tallies over **every square the grid draws**, not just the ones the
+ * server counted.
+ *
+ * `/mastery` returns `counts` and `total` for the tables a student has
+ * unlocked — 36 facts on the free tier — while the grid above draws all 144 and
+ * fills the rest in grey. Summarising the response therefore produced a panel
+ * headed WHOLE GRID that said "0 untried" over a screen two-thirds grey, and
+ * "12/36 solid" under a picture of 144 squares.
+ *
+ * Counting what is drawn is the only version of this that can't disagree with
+ * the thing it sits under. Locked tables land in `NONE`, which is exactly what
+ * they look like and exactly what they are: not tried yet.
+ */
+private fun countStages(cells: Map<Pair<Int, Int>, MasteryCell>, maxFactor: Int): StageCounts {
+    var none = 0
+    var bronze = 0
+    var silver = 0
+    var gold = 0
+    var blue = 0
+
+    for (a in 1..maxFactor) {
+        for (b in 1..maxFactor) {
+            when (cells[a to b]?.stage?.toStage() ?: MasteryStage.NONE) {
+                MasteryStage.NONE -> none++
+                MasteryStage.BRONZE -> bronze++
+                MasteryStage.SILVER -> silver++
+                MasteryStage.GOLD -> gold++
+                MasteryStage.BLUE -> blue++
+            }
+        }
+    }
+
+    return StageCounts(none = none, bronze = bronze, silver = silver, gold = gold, blue = blue)
 }
 
 /* ------------------------------------------------------------ the header bar */
@@ -456,7 +502,7 @@ private val PanelHeaderHeight = 34.dp
 private fun FactTicket(
     cell: MasteryCell,
     detail: FactDetail?,
-    grid: MasteryGrid,
+    maxFactor: Int,
     unlockedTables: List<Int>,
     onPractise: (List<Int>) -> Unit,
 ) {
@@ -467,7 +513,7 @@ private fun FactTicket(
     // panel would have to work out that the two are the same thing.
     PanelHeader(
         title = stage.headline(),
-        trailing = "FACT ${factIndex(cell, grid.maxFactor)}/${grid.total}",
+        trailing = "FACT ${factIndex(cell, maxFactor)}/${maxFactor * maxFactor}",
         fill = stage.fill(),
         content = stage.onFill(),
     )
@@ -644,16 +690,18 @@ private fun Tick(fill: Color, modifier: Modifier = Modifier) {
  */
 @Composable
 private fun GridSummary(
-    grid: MasteryGrid,
+    cells: Map<Pair<Int, Int>, MasteryCell>,
+    maxFactor: Int,
     unlockedTables: List<Int>,
     onPractise: (List<Int>) -> Unit,
 ) {
-    val counts = grid.counts
+    val total = maxFactor * maxFactor
+    val counts = remember(cells, maxFactor) { countStages(cells, maxFactor) }
     val solid = counts.gold + counts.blue
 
     PanelHeader(
         title = "YOUR GRID",
-        trailing = "$solid/${grid.total} SOLID",
+        trailing = "$solid/$total SOLID",
         fill = PopTokens.TealDeep,
         content = PopTokens.White,
     )
@@ -669,7 +717,7 @@ private fun GridSummary(
                 .fillMaxWidth()
                 .padding(top = 2.dp, bottom = 10.dp)
                 .semantics(mergeDescendants = true) {
-                    contentDescription = "$solid of ${grid.total} facts solid"
+                    contentDescription = "$solid of $total facts solid"
                 },
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.Bottom,
@@ -699,7 +747,7 @@ private fun GridSummary(
 
             PopGap(5.dp)
 
-            StageBar(counts = counts, total = grid.total)
+            StageBar(counts = counts, total = total)
 
             PopGap(7.dp)
 
@@ -711,7 +759,7 @@ private fun GridSummary(
         // is weakest.
         PopButton(
             text = "PRACTISE WEAK SPOTS",
-            onClick = { onPractise(weakestTables(grid, unlockedTables)) },
+            onClick = { onPractise(weakestTables(cells, unlockedTables)) },
             tone = PopTone.Yellow,
             size = PopSize.Large,
             fullWidth = true,
@@ -839,11 +887,14 @@ private fun factIndex(cell: MasteryCell, maxFactor: Int): Int =
  * to the whole unlocked set when the grid is complete enough to have no weak
  * spots left, which is the one time "practise everything" is the right answer.
  */
-private fun weakestTables(grid: MasteryGrid, unlockedTables: List<Int>): List<Int> {
+private fun weakestTables(
+    cells: Map<Pair<Int, Int>, MasteryCell>,
+    unlockedTables: List<Int>,
+): List<Int> {
     if (unlockedTables.isEmpty()) return emptyList()
 
     val unfinishedPerTable = unlockedTables.associateWith { table ->
-        grid.cells.count { cell ->
+        cells.values.count { cell ->
             (cell.a == table || cell.b == table) &&
                 cell.stage.toStage().ordinal < MasteryStage.GOLD.ordinal
         }

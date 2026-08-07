@@ -2,7 +2,6 @@ package com.timestabletradies
 
 import android.net.Uri
 import android.os.Bundle
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.getValue
@@ -13,12 +12,39 @@ import androidx.compose.runtime.setValue
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.fragment.app.FragmentActivity
 import com.timestabletradies.core.designsystem.PopTheme
+import com.timestabletradies.godot.ensurePackExtracted
 import com.timestabletradies.ui.AppEntry
 import com.timestabletradies.ui.TradiesApp
+import org.godotengine.godot.Godot
+import org.godotengine.godot.GodotFragment
+import org.godotengine.godot.GodotHost
 
-class MainActivity : ComponentActivity() {
+/**
+ * The app's one activity, and the engine's host.
+ *
+ * **It is a `FragmentActivity` rather than a `ComponentActivity` because
+ * `GodotFragment` is an AndroidX fragment.** That is the whole reason for the
+ * change; nothing about the Compose content depends on it.
+ *
+ * [GodotHost] has exactly two members that must be implemented — the rest are
+ * defaults — plus [getCommandLine], which is how the engine is told where its
+ * project data is. Everything else about the engine's behaviour is left alone.
+ */
+class MainActivity : FragmentActivity(), GodotHost {
+
+    /**
+     * Where the packed project lives, resolved once at startup.
+     *
+     * Null when `city.pck` is missing from assets, which means
+     * `godot/export-pck.ps1` has not been run. The engine is then simply never
+     * started and the screens that would have shown a city draw their fallback.
+     */
+    private var packPath: String? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
+        packPath = ensurePackExtracted(this)?.absolutePath
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         goImmersive()
@@ -80,6 +106,30 @@ class MainActivity : ComponentActivity() {
                 WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
             hide(WindowInsetsCompat.Type.systemBars())
         }
+    }
+
+    /* ------------------------------------------------------------ GodotHost */
+
+    override fun getActivity(): android.app.Activity = this
+
+    override fun getGodot(): Godot? =
+        (supportFragmentManager.findFragmentByTag("godot_city") as? GodotFragment)?.godot
+
+    /**
+     * What the engine is started with.
+     *
+     * `--main-pack` is the load-bearing argument: the project is shipped as a
+     * `.pck` in assets and unpacked to internal storage, because the engine
+     * needs a real filesystem path and an Android asset is an entry inside the
+     * APK rather than a file.
+     *
+     * Returning an empty list when the pack is missing is deliberate. The
+     * engine then finds no project and refuses to start, which is a logged
+     * failure on one screen rather than a crash on the app's front door.
+     */
+    override fun getCommandLine(): MutableList<String> {
+        val pack = packPath ?: return mutableListOf()
+        return mutableListOf("--main-pack", pack)
     }
 }
 

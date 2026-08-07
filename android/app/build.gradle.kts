@@ -38,6 +38,15 @@ android {
             "SUPABASE_KEY",
             "\"${env("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY")}\"",
         )
+
+        // The Godot library ships native engine builds for every Android ABI,
+        // and each one is tens of megabytes. Shipping all four would quadruple
+        // the APK to carry three the device can never load — arm64 is every
+        // phone and tablet this will run on. Play delivers per-ABI splits at
+        // release; this is what keeps the debug build installable.
+        ndk {
+            abiFilters += listOf("arm64-v8a")
+        }
     }
 
     buildTypes {
@@ -75,6 +84,22 @@ dependencies {
     implementation(project(":core:designsystem"))
     implementation(project(":core:network"))
     implementation(libs.androidx.security.crypto)
+
+    /*
+     * The Godot engine, as a library.
+     *
+     * Extracted from `libs/debug/godot-lib.template_debug.aar` inside
+     * `android_source.zip` inside the 1.2 GB export templates archive — which
+     * is the only place it is published. Not committed: see android/.gitignore
+     * and `godot/export-pck.ps1` for how the pair is produced.
+     *
+     * An .aar carries no transitive dependencies, so anything it compiles
+     * against has to be declared here. Fragment is the one that matters —
+     * `GodotFragment` is an AndroidX fragment, which is also why MainActivity
+     * had to become a FragmentActivity.
+     */
+    implementation(files("libs/godot-lib.template_debug.aar"))
+    implementation("androidx.fragment:fragment-ktx:1.8.5")
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)

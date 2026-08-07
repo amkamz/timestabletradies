@@ -153,6 +153,9 @@ sealed interface FullRoute {
     data class Toolbox(val preselect: List<Int> = emptyList()) : FullRoute
     data object BigJob : FullRoute
 
+    /** Sparky's City — the Godot surface, with Compose chrome on top. */
+    data object City : FullRoute
+
     /* boss + house */
     data class BossIntro(val table: Int) : FullRoute
     data class BossVictory(val table: Int) : FullRoute

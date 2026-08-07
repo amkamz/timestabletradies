@@ -41,6 +41,8 @@ import com.timestabletradies.ui.crew.CrewRaceLobbyScreen
 import com.timestabletradies.ui.crew.JobChallengeScreen
 import com.timestabletradies.ui.crew.TradeExpoScreen
 import com.timestabletradies.ui.grandparent.StickerSendScreen
+import com.timestabletradies.godot.GodotPack
+import com.timestabletradies.ui.house.CityScreen
 import com.timestabletradies.ui.house.HouseProjectScreen
 import com.timestabletradies.ui.house.MoveInDayScreen
 import com.timestabletradies.ui.jobs.JobBoardScreen
@@ -413,7 +415,10 @@ fun TradiesApp(
                         },
                         onCrewRace = { push(FullRoute.CrewLobby) },
                         onSettings = { push(FullRoute.Accessibility) },
-                        onHouse = { panel = Panel.House },
+                        // Tapping the city opens it. The house project panel is
+                        // still reachable from inside — this is the first half
+                        // of the wipe-down described in docs/native/vision.md.
+                        onHouse = { push(FullRoute.City) },
                         onShop = { tab = PopTab.Shop; panel = Panel.Shop },
                     )
                 }
@@ -919,6 +924,18 @@ fun TradiesApp(
                 )
             },
             onBack = { pop() },
+        )
+
+        FullRoute.City -> CityScreen(
+            cityName = "${student?.displayName ?: "Your"}'s City",
+            level = CityLevel.levelOf(student?.cityXp ?: 0),
+            engineAvailable = GodotPack.isAvailable(context),
+            onBack = { pop() },
+            onShop = {
+                pop()
+                tab = PopTab.Shop
+                panel = Panel.Shop
+            },
         )
 
         is FullRoute.NotOnAndroidYet -> NotOnAndroidYetScreen(

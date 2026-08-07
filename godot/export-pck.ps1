@@ -1,11 +1,25 @@
-# Packs the Godot project into the .pck the Android app ships in its assets.
+# Packs the Godot project into the Android app's assets.
 #
-# The app is built by Gradle; Godot only produces the data the embedded engine
-# reads. Run this after changing anything under godot/ and before building the
-# APK, or the app will render the previous city.
+# Run this after changing anything under godot/ and before building the APK, or
+# the app will render the previous city.
 #
-# The .pck is a build artifact and is not committed — it is entirely derived
-# from this directory.
+# ## Why this exports a whole APK and then throws it away
+#
+# The obvious approach — `--export-pack` to a .pck, ship that, point the engine
+# at it with `--main-pack` — does not work with a stock template:
+#
+#     ERROR: --main-pack is attempting to load from outside of the executable,
+#     but this Godot binary was compiled without support for path overrides.
+#
+# Export templates are hardened against loading a pack from an arbitrary path.
+# The engine will only read its project from inside the APK, and the layout it
+# expects is not a pack at all: `res://x` maps to `assets/x` as loose files,
+# with `assets/project.binary` as the root marker and `assets/_cl_` carrying the
+# command line.
+#
+# Rather than reproduce that layout by hand, this exports a real Android APK —
+# letting Godot's own export plugin decide the layout — and lifts its `assets/`
+# directory. The APK itself is discarded; Gradle builds the app.
 
 $ErrorActionPreference = "Stop"
 
@@ -18,17 +32,44 @@ if (-not (Test-Path $godot)) {
     exit 1
 }
 
-$assets = Join-Path $PSScriptRoot "..\android\app\src\main\assets"
-if (-not (Test-Path $assets)) { New-Item -ItemType Directory -Force $assets | Out-Null }
+$appAssets = Join-Path $PSScriptRoot "..\android\app\src\main\assets"
+$staging = Join-Path ([System.IO.Path]::GetTempPath()) "ttt-godot-export"
+$probe = Join-Path $staging "probe.apk"
 
-$out = Join-Path $assets "city.pck"
+if (Test-Path $staging) { Remove-Item -Recurse -Force $staging }
+New-Item -ItemType Directory -Force $staging | Out-Null
 
 # --import first: a clean checkout has no import cache, and exporting without
-# one silently packs source .gltf files the engine cannot read at runtime.
-& $godot --headless --path $PSScriptRoot --import
-& $godot --headless --path $PSScriptRoot --export-pack "Android" $out
+# one packs the source .gltf files rather than their imported form — which
+# produces a project the engine loads and then draws nothing from.
+# Godot writes progress and warnings to stderr even on a clean run, and
+# PowerShell turns any native stderr into a terminating NativeCommandError under
+# `Stop`. The exit code is the thing that actually says whether it worked.
+$ErrorActionPreference = "Continue"
+& $godot --headless --path $PSScriptRoot --import 2>&1 | Out-Null
+& $godot --headless --path $PSScriptRoot --export-debug "Android" $probe 2>&1 |
+    Where-Object { $_ -match "ERROR|error:" } | Select-Object -First 10
+$exported = $LASTEXITCODE
+$ErrorActionPreference = "Stop"
 
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+if ($exported -ne 0 -or -not (Test-Path $probe)) {
+    Write-Output "Godot export failed (exit $exported)"
+    exit 1
+}
 
-$size = [math]::Round((Get-Item $out).Length / 1KB)
-Write-Output "packed $out ($size KB)"
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+$extracted = Join-Path $staging "unzipped"
+[System.IO.Compression.ZipFile]::ExtractToDirectory($probe, $extracted)
+
+# Replace wholesale. Leaving stale files behind would let a deleted scene keep
+# loading, which is a confusing thing to debug on a phone.
+if (Test-Path $appAssets) { Remove-Item -Recurse -Force $appAssets }
+New-Item -ItemType Directory -Force $appAssets | Out-Null
+
+Copy-Item -Recurse -Force (Join-Path $extracted "assets\*") $appAssets
+
+Remove-Item -Recurse -Force $staging
+
+$count = (Get-ChildItem -Recurse -File $appAssets).Count
+$size = [math]::Round(((Get-ChildItem -Recurse -File $appAssets | Measure-Object -Property Length -Sum).Sum) / 1KB)
+Write-Output "packed $count files into app assets ($size KB)"

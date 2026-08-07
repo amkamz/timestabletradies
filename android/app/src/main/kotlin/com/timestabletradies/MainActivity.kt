@@ -14,7 +14,6 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.fragment.app.FragmentActivity
 import com.timestabletradies.core.designsystem.PopTheme
-import com.timestabletradies.godot.ensurePackExtracted
 import com.timestabletradies.ui.AppEntry
 import com.timestabletradies.ui.TradiesApp
 import org.godotengine.godot.Godot
@@ -34,17 +33,7 @@ import org.godotengine.godot.GodotHost
  */
 class MainActivity : FragmentActivity(), GodotHost {
 
-    /**
-     * Where the packed project lives, resolved once at startup.
-     *
-     * Null when `city.pck` is missing from assets, which means
-     * `godot/export-pck.ps1` has not been run. The engine is then simply never
-     * started and the screens that would have shown a city draw their fallback.
-     */
-    private var packPath: String? = null
-
     override fun onCreate(savedInstanceState: Bundle?) {
-        packPath = ensurePackExtracted(this)?.absolutePath
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         goImmersive()
@@ -116,21 +105,19 @@ class MainActivity : FragmentActivity(), GodotHost {
         (supportFragmentManager.findFragmentByTag("godot_city") as? GodotFragment)?.godot
 
     /**
-     * What the engine is started with.
+     * What the engine is started with: nothing.
      *
-     * `--main-pack` is the load-bearing argument: the project is shipped as a
-     * `.pck` in assets and unpacked to internal storage, because the engine
-     * needs a real filesystem path and an Android asset is an entry inside the
-     * APK rather than a file.
+     * The project is not passed in, because it cannot be. Passing
+     * `--main-pack` at a copy in internal storage is refused outright — export
+     * templates are built without path-override support, and the engine aborts
+     * rather than load a project from outside the APK.
      *
-     * Returning an empty list when the pack is missing is deliberate. The
-     * engine then finds no project and refuses to start, which is a logged
-     * failure on one screen rather than a crash on the app's front door.
+     * So the project lives in the APK's assets as loose files, which is the
+     * layout Godot's own Android export produces: `res://x` at `assets/x`,
+     * `assets/project.binary` as the root marker, and `assets/_cl_` carrying
+     * any arguments. The engine finds all of that by itself.
      */
-    override fun getCommandLine(): MutableList<String> {
-        val pack = packPath ?: return mutableListOf()
-        return mutableListOf("--main-pack", pack)
-    }
+    override fun getCommandLine(): MutableList<String> = mutableListOf()
 }
 
 /**

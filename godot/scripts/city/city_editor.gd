@@ -71,6 +71,11 @@ func _build_camera() -> void:
 	var camera := Camera3D.new()
 	camera.name = "Camera3D"
 	camera.projection = Camera3D.PROJECTION_ORTHOGONAL
+	# An orthogonal camera's `size` is its *vertical* extent by default, so a
+	# framing tuned on a landscape window overflowed the sides the moment it ran
+	# on a portrait phone. The city is as wide as it is deep and the screen is
+	# the narrow way round, so width is the dimension that has to fit.
+	camera.keep_aspect = Camera3D.KEEP_WIDTH
 	# Pulled back along the pivot's local Z. Far enough that nothing clips at
 	# the near plane when the city is turned.
 	camera.position = Vector3(0, 0, 40)

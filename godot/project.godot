@@ -13,7 +13,21 @@ config_version=5
 config/name="Times Table Tradies"
 config/description="City, characters and games. Embedded in the native shell."
 config/features=PackedStringArray("4.7", "Mobile")
+config/icon="res://icon.svg"
 run/main_scene="res://scenes/city/city_editor.tscn"
+
+[display]
+
+; The engine calls setRequestedOrientation on the host activity when it starts,
+; and its handheld default is landscape — so embedding it rotated the whole app,
+; Compose screens included, and the rotation then recreated the activity and
+; threw away every bit of navigation state with it.
+;
+; **This is an int, not a string.** Godot 4 stores it as a DisplayServer
+; ScreenOrientation enum: 0 landscape, 1 portrait. Writing "portrait" here
+; parses as nothing and silently leaves the default in place, which is exactly
+; what happened the first time.
+window/handheld/orientation=1
 
 [rendering]
 

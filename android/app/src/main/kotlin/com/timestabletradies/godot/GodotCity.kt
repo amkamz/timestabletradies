@@ -14,7 +14,6 @@ import androidx.fragment.app.FragmentActivity
 import androidx.fragment.app.commit
 import androidx.fragment.app.findFragment
 import org.godotengine.godot.GodotFragment
-import java.io.File
 
 /**
  * The Godot engine, inside a Compose screen.
@@ -31,57 +30,51 @@ import java.io.File
  */
 private const val TAG = "GodotCity"
 
-private const val PACK_ASSET = "city.pck"
+private const val PACK_ASSET = "project.binary"
 private const val FRAGMENT_TAG = "godot_city"
 
-/** Whether there is a city to render at all. */
+/**
+ * Whether there is a city to render at all.
+ *
+ * ## Why there is no pack file to point at
+ *
+ * The obvious design — ship a `.pck`, copy it to internal storage, start the
+ * engine with `--main-pack /path/to/it` — is refused by a stock export
+ * template:
+ *
+ * ```
+ * ERROR: --main-pack is attempting to load from outside of the executable, but
+ * this Godot binary was compiled without support for path overrides. Aborting.
+ * ```
+ *
+ * Templates are hardened against loading a project from an arbitrary path. The
+ * engine will only read its project from inside the APK, and what it expects
+ * there is not a pack but the project as **loose files**: `res://x` maps to
+ * `assets/x`, with `assets/project.binary` as the root marker and `assets/_cl_`
+ * carrying the command line.
+ *
+ * `godot/export-pck.ps1` produces exactly that by exporting a real Android APK
+ * and lifting its `assets/` directory, which lets Godot's own export plugin
+ * decide the layout rather than this file guessing at it.
+ */
 object GodotPack {
     /**
-     * True when `city.pck` is present in assets.
+     * True when the project has been packed into assets.
      *
-     * Checked rather than assumed because the pack is a build artifact: it is
-     * gitignored and produced by `godot/export-pck.ps1`, so a clean checkout
-     * builds an APK without one. A screen that says "not packed yet" beats a
-     * black rectangle nobody can diagnose.
+     * Checked rather than assumed: the packed project is a build artifact, it
+     * is gitignored, and a clean checkout builds an APK without it. A screen
+     * that says "not packed yet" beats a black rectangle nobody can diagnose.
      */
     fun isAvailable(context: Context): Boolean = try {
-        context.assets.openFd(PACK_ASSET).close()
+        // `open`, not `openFd`. The latter answers "is this asset stored
+        // uncompressed" rather than "does this asset exist", and answering the
+        // wrong question here once put a "city isn't packed yet" card in front
+        // of a project that was sitting in the APK the whole time.
+        context.assets.open(PACK_ASSET).close()
         true
     } catch (_: Exception) {
+        Log.w(TAG, "no $PACK_ASSET in assets; run godot/export-pck.ps1")
         false
-    }
-}
-
-/**
- * Copy the packed project out of assets and onto the filesystem.
- *
- * The engine wants a real path for `--main-pack`, and Android assets are not
- * files — they are entries inside the APK. So it is unpacked once into internal
- * storage and reused after that.
- *
- * Re-copied whenever the sizes differ, which is what makes a rebuilt city
- * actually appear rather than the app quietly rendering last week's one. A
- * cheap check rather than a hash: the pack is regenerated wholesale by
- * `export-pck.ps1`, so a content change is a size change in all but the most
- * unlucky case, and the cost of being wrong is one stale frame in a debug build.
- */
-fun ensurePackExtracted(context: Context): File? {
-    val target = File(context.filesDir, PACK_ASSET)
-    return try {
-        val packed = context.assets.openFd(PACK_ASSET).use { it.length }
-        if (!target.exists() || target.length() != packed) {
-            context.assets.open(PACK_ASSET).use { input ->
-                target.outputStream().use { output -> input.copyTo(output) }
-            }
-            Log.i(TAG, "unpacked $PACK_ASSET (${target.length()} bytes)")
-        }
-        target
-    } catch (cause: Exception) {
-        // A missing pack means `export-pck.ps1` was not run. Say so in the log
-        // and let the caller draw its fallback — a screen with no city on it is
-        // recoverable, a crash on the app's home screen is not.
-        Log.e(TAG, "no $PACK_ASSET in assets; run godot/export-pck.ps1", cause)
-        null
     }
 }
 

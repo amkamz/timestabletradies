@@ -31,7 +31,7 @@ const ZOOM_STEP := 2.0
 		zoom = clamp_zoom(value)
 		_apply()
 
-@export var yaw_degrees: float = 45.0:
+@export var yaw_degrees: float = ISO_YAW:
 	set(value):
 		yaw_degrees = normalise_degrees(value)
 		_apply()
@@ -64,17 +64,32 @@ static func clamp_zoom(value: float) -> float:
 	return clampf(value, MIN_ZOOM, MAX_ZOOM)
 
 
-## The nearest 90° step. Used when a drag is released, so the town always
-## settles onto a face rather than at a tiring in-between angle.
+## The isometric rest angle.
+##
+## A square town seen from 45° presents a corner to the camera, which is what
+## makes it read as isometric. Seen from 0° it presents a flat face: the roads
+## line up with the screen edges and the whole thing goes from a model of a town
+## to a floor plan of one.
+const ISO_YAW := 45.0
+
+
+## The nearest resting angle — 45°, 135°, 225° or 315°.
+##
+## **Not a multiple of 90.** Snapping to 0/90/180/270 was the first version and
+## it was wrong in a way that only showed up on a device: the camera rests at
+## 45°, so the very first drag-release rounded it to 90° and flattened the
+## isometric view into a top-down one. Every resting angle has to be a corner,
+## because a corner is the whole point.
 static func nearest_quarter(degrees: float) -> float:
-	var normalised := normalise_degrees(degrees)
-	return normalise_degrees(round(normalised / 90.0) * 90.0)
+	var offset := normalise_degrees(degrees - ISO_YAW)
+	return normalise_degrees(round(offset / 90.0) * 90.0 + ISO_YAW)
 
 
-## Which of the four faces the town is currently showing, 0–3. The shell uses
+## Which of the four corners the town is currently showing, 0–3. The shell uses
 ## this to describe the view aloud without needing the angle.
 static func quarter_index(degrees: float) -> int:
-	return int(nearest_quarter(degrees) / 90.0) % 4
+	var offset := normalise_degrees(nearest_quarter(degrees) - ISO_YAW)
+	return int(offset / 90.0) % 4
 
 
 ## ------------------------------------------------------------------- input

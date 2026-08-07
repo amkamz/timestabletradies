@@ -77,6 +77,37 @@ android {
         compose = true
         buildConfig = true
     }
+
+    androidResources {
+        /*
+         * Leave the Godot pack uncompressed in the APK.
+         *
+         * `AssetManager.openFd()` only works on *stored* assets — ask it for a
+         * deflated one and it throws FileNotFoundException. AAPT compresses
+         * `.pck` by default, so the engine's data was in the APK the whole time
+         * and every check for it said no. The failure is silent and reads
+         * exactly like a missing file.
+         *
+         * It is also wasted work: a .pck is already a packed archive, and this
+         * one deflated by 7%.
+         */
+        noCompress += listOf("pck", "sparsepck")
+
+        /*
+         * Keep dot-directories in assets.
+         *
+         * AAPT's default ignore pattern contains `.*`, which silently drops
+         * every dotfile and dot-directory under `assets/`. Godot's exported
+         * project keeps its imported resources and its script class cache in
+         * `assets/.godot/`, so the default pattern removed the entire compiled
+         * half of the project on the way into the APK — and the engine then
+         * booted, initialised Vulkan, and failed reading its own class cache.
+         *
+         * This is the AGP default with `.*` taken out and nothing else changed.
+         */
+        ignoreAssetsPattern =
+            "!.svn:!.git:!.ds_store:!*.scc:<dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~"
+    }
 }
 
 dependencies {

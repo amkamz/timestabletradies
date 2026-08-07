@@ -43,12 +43,6 @@ func _ready() -> void:
 ## black. The pack is flat-shaded low-poly, so this is about legibility rather
 ## than realism — a child needs to read the shape of a roof, not its material.
 func _build_environment() -> void:
-	var sun := DirectionalLight3D.new()
-	sun.name = "Sun"
-	sun.rotation_degrees = Vector3(-50, -130, 0)
-	sun.light_energy = 1.1
-	add_child(sun)
-
 	var env := Environment.new()
 	env.background_mode = Environment.BG_COLOR
 	# Toolbox Pop's sky, so the city sits on the app's own paper rather than on
@@ -89,6 +83,21 @@ func _build_camera() -> void:
 	# renders about a tenth of one tile, which looks like a solid grey screen
 	# rather than like a bug.
 	rig.add_child(camera)
+
+	# The key light is a child of the rig, not of the world.
+	#
+	# A sun fixed in world space is physically right and looks wrong: turning
+	# the town swings every lit face through the light, so the whole city
+	# appears to brighten and darken as a child drags it. Parenting the light to
+	# the rig fixes its direction *relative to the view*, so the near faces stay
+	# lit and only the town turns — which is what the eye expects from spinning a
+	# model on a table rather than spinning the table under a lamp.
+	var sun := DirectionalLight3D.new()
+	sun.name = "Sun"
+	sun.rotation_degrees = Vector3(-40, -35, 0)
+	sun.light_energy = 1.1
+	rig.add_child(sun)
+
 	add_child(rig)
 
 	rig.frame_grid(view.grid.size, view.manifest.cell_size)
@@ -111,7 +120,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
 			rig.zoom_out()
 	elif event is InputEventMouseMotion and _dragging:
-		rig.drag(event.relative)
+		# `velocity` is the pointer's speed in pixels per second, which the
+		# engine already tracks — it is what lets the release tell a flick from
+		# a careful placement without this having to time anything itself.
+		rig.drag(event.relative, event.velocity)
 
 
 ## `--capture <path>` renders one frame, writes it and quits.

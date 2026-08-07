@@ -388,7 +388,14 @@ private fun FactPanel(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .popSurface(fill = PopTokens.White, radius = PopTokens.RadiusMd),
+            .popSurface(fill = PopTokens.White, radius = PopTokens.RadiusMd)
+            // Clips the *children*, which is what the coloured header needs:
+            // `popSurface` is a shape-aware background plus a shape-aware
+            // border, but neither constrains what is drawn inside, so a
+            // full-width bar painted its own square corners straight over the
+            // card's rounded ones. Last in the chain on purpose — the border
+            // draws before this and keeps its own radius.
+            .clip(RoundedCornerShape(PopTokens.RadiusMd)),
     ) {
         if (cell == null) {
             GridSummary(

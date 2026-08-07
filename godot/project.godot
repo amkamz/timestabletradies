@@ -13,6 +13,7 @@ config_version=5
 config/name="Times Table Tradies"
 config/description="City, characters and games. Embedded in the native shell."
 config/features=PackedStringArray("4.7", "Mobile")
+run/main_scene="res://scenes/city/city_editor.tscn"
 
 [rendering]
 

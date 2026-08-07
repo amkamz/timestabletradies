@@ -113,7 +113,10 @@ func rotate_quarter(steps: int) -> void:
 func frame_grid(size: int, cell_size: float) -> void:
 	var extent := size * cell_size
 	position = Vector3(extent * 0.5, 0.0, extent * 0.5)
-	zoom = extent * 1.2
+	# 1.6 rather than 1.0: a square town seen from 45° presents its *diagonal*
+	# to the camera, which is 1.41 times its side, and buildings stand up out of
+	# the plane on top of that. Framing to the side length crops the corners.
+	zoom = extent * 1.6
 
 
 func _apply() -> void:

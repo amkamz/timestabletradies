@@ -47,12 +47,26 @@ document, then change the asset**, so the two never disagree.
 | **Scale** | Applied. No non-uniform scale on the exported root, no unapplied modifiers |
 | **File naming** | `snake_case`, lowercase, no spaces, no version suffixes |
 
-**Grid cell size is measured from the asset pack, not imposed on it.** The
-placeholder figure below is 4 m, but if KayKit or Kenney tiles are authored at
-1 unit per tile then **the cell becomes 1 unit** and everything else scales with
-it. Rescaling a bought pack to satisfy a document is the wrong way round —
-`CELL_SIZE` is one constant in `city_grid.gd` and it gets set once the real
-tiles are on disk.
+**Grid cell = 2 units, measured.** The pack in use is **KayKit City Builder
+Bits 1.0** (CC0, Kay Lousberg), and every tile in it is 2 × 2 on the ground
+plane with its origin centred and its base on Y = 0 — which is the shape this
+document already asked for, so `CELL_SIZE` moved to match the art rather than
+the art being rescaled to match a number. A 5 × 5 city is 10 m square.
+
+**The pack ships `.gltf` + `.bin`, not `.glb`.** Godot imports both identically.
+The one thing that matters is that each `.gltf` references `citybits_texture.png`
+as a **bare filename**, so the texture must sit in the same folder as the meshes
+— it is copied into each of `city/tiles`, `city/buildings`, `city/props` and
+`vehicles`.
+
+**Some categories arrive with their own base slab, and some don't.** Roads and
+buildings in this pack are modelled standing on a slab — that is what the
+`_withoutBase` variants exist to opt out of. Props are not. Both halves of that
+were learned from a render rather than reasoned about: laying a ground tile
+under everything put two coplanar surfaces at Y = 0 and the road markings
+vanished into a z-fighting shimmer, and laying one only under empty cells then
+punched a hole of open sky wherever a bush stood. `CityView.SELF_BASING` is
+where that lives.
 
 **The ground plane is XZ and rotation is about Y.** Godot is Y-up, and every
 Y-up asset pack — KayKit and Kenney included — assumes it. "The city lies flat

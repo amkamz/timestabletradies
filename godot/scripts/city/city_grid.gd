@@ -19,9 +19,14 @@ const BASE_SIZE := 5
 ## this far is still an open question in docs/native/vision.md.
 const MAX_SIZE := 12
 
-## Metres per cell. Set from the asset pack once real tiles are on disk — the
-## contract measures the pack rather than imposing a number on it.
-const CELL_SIZE := 1.0
+## Metres per cell, **measured from the pack rather than imposed on it**.
+##
+## Every KayKit City Builder Bits tile is 2 × 2 on the ground plane with its
+## origin at the centre and its base on Y = 0, which is the shape the asset
+## contract asks for — so the constant moves to match the art instead of the art
+## being rescaled to match a number somebody made up. A 5 × 5 city is 10 m
+## square and a 6 × 6 is 12 m.
+const CELL_SIZE := 2.0
 
 enum Rotation { DEG_0, DEG_90, DEG_180, DEG_270 }
 

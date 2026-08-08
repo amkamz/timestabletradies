@@ -93,6 +93,13 @@ fun SiteHomeScreen(
     onSettings: () -> Unit,
     onHouse: () -> Unit,
     onShop: () -> Unit,
+    /**
+     * The city, drawn where the house placeholder used to be.
+     *
+     * A slot rather than a hard dependency: this screen knows nothing about
+     * Godot, so it still previews and still renders on a device with no engine.
+     */
+    city: @Composable () -> Unit = {},
 ) {
     BoxWithConstraints(Modifier.fillMaxSize()) {
         // Captured out of the constraints scope: the layers below are nested in
@@ -139,26 +146,27 @@ fun SiteHomeScreen(
                     .background(PopTokens.Ground),
             )
 
-            // House art 196 × 198 centred at y104; tradie 62 × 96 at x16 / y212.
-            PopArtSlot(
-                label = "HOUSE ART\n@ ${state.stageName.uppercase()} STAGE\n(fills as kid earns)",
+            // The city, where the house placeholder used to be — 196 × 198
+            // centred at y104 on the signed-off canvas.
+            //
+            // Tier 1 from `docs/native/rescope.md`: the engine draws and owns
+            // nothing else. It is one labelled, tappable node here — a picture
+            // of the town that opens the town — so the whole screen keeps the
+            // accessibility tree it had when this was a dotted box.
+            Box(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .offset(y = h * HOUSE_TOP)
                     .width(d.px(196))
                     .height(d.px(198))
-                    .clickable(role = Role.Button, onClick = onHouse),
-                radius = d.px(14),
-            )
-            PopArtSlot(
-                label = "TRADIE",
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .offset(x = d.px(16), y = h * TRADIE_TOP)
-                    .width(d.px(62))
-                    .height(d.px(96)),
-                radius = d.px(11),
-            )
+                    .clickable(role = Role.Button, onClick = onHouse)
+                    .semantics(mergeDescendants = true) {
+                        contentDescription =
+                            "${state.houseName}. Tap to open your city."
+                    },
+            ) {
+                city()
+            }
 
             /* -------------------------------------------------------- the HUD */
 
@@ -293,7 +301,6 @@ private const val HILL_HEIGHT = 120f / 634f
 private const val HILL_BLEED = 0.45f
 private const val GROUND_TOP = 262f / 634f
 private const val HOUSE_TOP = 104f / 634f
-private const val TRADIE_TOP = 212f / 634f
 private const val DECK_TOP = 336f / 634f
 
 /**

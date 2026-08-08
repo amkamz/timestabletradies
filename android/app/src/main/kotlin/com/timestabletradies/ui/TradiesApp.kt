@@ -12,6 +12,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import com.timestabletradies.core.designsystem.PopTab
 import com.timestabletradies.core.designsystem.PopTabScaffold
@@ -44,6 +46,7 @@ import com.timestabletradies.ui.crew.TradeExpoScreen
 import com.timestabletradies.ui.grandparent.StickerSendScreen
 import com.timestabletradies.godot.CityLayout
 import com.timestabletradies.godot.CityState
+import com.timestabletradies.godot.GodotCityView
 import com.timestabletradies.godot.GodotPack
 import com.timestabletradies.ui.house.CityScreen
 import com.timestabletradies.ui.house.HouseProjectScreen
@@ -435,6 +438,22 @@ fun TradiesApp(
                         // of the wipe-down described in docs/native/vision.md.
                         onHouse = { push(FullRoute.City) },
                         onShop = { tab = PopTab.Shop; panel = Panel.Shop },
+                        city = {
+                            if (GodotPack.isAvailable(context)) {
+                                GodotCityView(
+                                    modifier = Modifier.fillMaxSize(),
+                                    // Decorative here: the Box around it carries
+                                    // the label and the tap, so the surface must
+                                    // not announce itself a second time.
+                                    contentDescription = "",
+                                    state = CityState.encode(
+                                        unlockedTables = playableTables,
+                                        grid = grid,
+                                        pieces = cityLayout.toJson(),
+                                    ),
+                                )
+                            }
+                        },
                     )
                 }
 

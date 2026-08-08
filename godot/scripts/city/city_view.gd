@@ -67,6 +67,23 @@ func _load_mesh(key: String) -> PackedScene:
 	return scene
 
 
+## A vehicle from the manifest's `vehicles` section.
+func _load_vehicle(key: String) -> PackedScene:
+	var cache_key := "vehicle:" + key
+	if _mesh_cache.has(cache_key):
+		return _mesh_cache[cache_key]
+
+	var path: String = manifest.vehicle_mesh_path(key)
+	var scene: PackedScene = null
+	if not path.is_empty() and ResourceLoader.exists(path):
+		scene = load(path)
+	else:
+		push_warning("CityView: no vehicle mesh for '%s'" % key)
+
+	_mesh_cache[cache_key] = scene
+	return scene
+
+
 ## A sibling mesh of a manifest piece — `building_A` plus `_withoutBase`.
 ##
 ## Quiet when absent, unlike [method _load_mesh]. These are an optimisation the

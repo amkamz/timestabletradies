@@ -18,9 +18,11 @@ const IsoCameraScript = preload("res://scripts/city/iso_camera.gd")
 const SampleCityScript = preload("res://scripts/city/sample_city.gd")
 const CityGridScript = preload("res://scripts/city/city_grid.gd")
 const BridgeScript = preload("res://bridge/city_bridge.gd")
+const TrafficScript = preload("res://scripts/city/traffic.gd")
 
 var view: Node3D
 var rig: Node3D
+var traffic: Node3D
 var bridge = BridgeScript.new()
 
 var _dragging := false
@@ -48,6 +50,11 @@ func _ready() -> void:
 	# screenshot-testable without a device attached.
 	view.grid = SampleCityScript.build()
 	view.render()
+
+	traffic = TrafficScript.new()
+	traffic.name = "Traffic"
+	add_child(traffic)
+	traffic.rebuild(view)
 
 	_build_camera()
 
@@ -86,6 +93,7 @@ func _on_city_state(state: Dictionary) -> void:
 
 	view.grid = grid
 	view.render()
+	traffic.rebuild(view)
 	rig.frame_grid(grid.size, view.manifest.cell_size)
 
 
@@ -97,6 +105,14 @@ func _build_environment() -> void:
 	env.background_mode = Environment.BG_COLOR
 	# Toolbox Pop's sky, so the city sits on the app's own paper rather than on
 	# the engine's default grey.
+	#
+	# **This should be transparent and is not, yet.** On the Site screen the city
+	# sits in a painted landscape and an opaque background puts a rectangle over
+	# it. `per_pixel_transparency/allowed` is on and the engine now logs "Render
+	# view should be transparent: true" — but clearing to a zero-alpha colour
+	# renders solid black, so the surface is not actually compositing alpha. The
+	# remaining half is the SurfaceView's own pixel format and z-order, which is
+	# a bigger change than a flat colour is worth today.
 	env.background_color = Color("a9e6f5")
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	env.ambient_light_color = Color("d8f3ee")
@@ -317,6 +333,16 @@ func _handle_capture_request() -> void:
 		return
 
 	var path: String = args[index + 1]
+
+	# An optional wait, in seconds, before the shot. Anything that moves —
+	# traffic, people — is invisible in a frame taken at startup, because it has
+	# not spawned yet. `--capture out.png 5` is how you photograph it.
+	var wait := 0.0
+	if index + 2 < args.size():
+		wait = args[index + 2].to_float()
+	if wait > 0.0:
+		await get_tree().create_timer(wait).timeout
+
 	await RenderingServer.frame_post_draw
 	# A second frame: the first can land before the glTF instances have had
 	# their transforms applied, which produces a screenshot of an empty plane

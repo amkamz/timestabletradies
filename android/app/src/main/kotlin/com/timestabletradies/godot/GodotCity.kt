@@ -140,12 +140,22 @@ fun GodotCityView(
                     return@apply
                 }
 
-                val existing = activity.supportFragmentManager.findFragmentByTag(FRAGMENT_TAG)
-                if (existing == null) {
-                    activity.supportFragmentManager.commit {
-                        setReorderingAllowed(true)
-                        add(this@apply.id, GodotFragment(), FRAGMENT_TAG)
-                    }
+                // **Moved, not shared.** The engine appears in two places — a
+                // small tile on the Site screen and the full city editor — and
+                // only ever one at a time, because a panel and a full route are
+                // mutually exclusive. A fragment cannot be reparented, so the
+                // old one is removed and a new one added to this container.
+                //
+                // The *engine* survives that: it is a process singleton, and the
+                // log says "Engine already initialized" then rebuilds its render
+                // view against the new surface. Only the fragment is cheap and
+                // disposable.
+                val manager = activity.supportFragmentManager
+                val existing = manager.findFragmentByTag(FRAGMENT_TAG)
+                manager.commit {
+                    setReorderingAllowed(true)
+                    if (existing != null) remove(existing)
+                    add(this@apply.id, GodotFragment(), FRAGMENT_TAG)
                 }
             }
         },

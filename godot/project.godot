@@ -18,6 +18,20 @@ run/main_scene="res://scenes/city/city_editor.tscn"
 
 [display]
 
+; NOT enabled, and here is what happens if you turn it on.
+;
+; The city sits inside a painted landscape on the Site screen, so its surface
+; ought to be transparent. Setting `window/per_pixel_transparency/allowed=true`
+; does flip the engine's own flag — the log goes from "Render view should be
+; transparent: false" to "true" — but the result on a device is a **solid black
+; rectangle**, whether the environment clears to a colour or to zero alpha. The
+; SurfaceView goes translucent and then composites against black rather than
+; against the Compose content behind it.
+;
+; The rest of that fix is the surface's pixel format and z-order, which is a
+; real change rather than a flag. Until then the city clears to Toolbox Pop's
+; sky, which blends with the screen's own sky well enough to live with.
+
 ; The engine calls setRequestedOrientation on the host activity when it starts,
 ; and its handheld default is landscape — so embedding it rotated the whole app,
 ; Compose screens included, and the rotation then recreated the activity and

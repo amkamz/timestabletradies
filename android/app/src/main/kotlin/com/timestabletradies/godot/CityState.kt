@@ -53,11 +53,13 @@ object CityState {
         unlockedTables: List<Int>,
         grid: MasteryGrid?,
         pieces: JSONArray,
+        transparent: Boolean = false,
     ): String {
         val payload = JSONObject()
         payload.put("unlocked_tables", JSONArray(unlockedTables))
         payload.put("square_correct", squareCorrect(grid))
         payload.put("pieces", pieces)
+        payload.put("transparent", transparent)
         return payload.toString()
     }
 

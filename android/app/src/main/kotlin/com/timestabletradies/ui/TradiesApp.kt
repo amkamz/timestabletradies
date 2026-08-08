@@ -446,10 +446,12 @@ fun TradiesApp(
                                     // the label and the tap, so the surface must
                                     // not announce itself a second time.
                                     contentDescription = "",
+                                    transparent = true,
                                     state = CityState.encode(
                                         unlockedTables = playableTables,
                                         grid = grid,
                                         pieces = cityLayout.toJson(),
+                                        transparent = true,
                                     ),
                                 )
                             }

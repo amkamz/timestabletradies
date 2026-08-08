@@ -1,7 +1,10 @@
 package com.timestabletradies.godot
 
 import android.content.Context
+import android.graphics.PixelFormat
 import android.util.Log
+import android.view.SurfaceView
+import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import androidx.compose.runtime.Composable
@@ -81,6 +84,38 @@ object GodotPack {
 }
 
 /**
+ * Put the engine's surface above the window so its alpha blends with Compose.
+ *
+ * Found by walking the tree rather than asked for: the engine owns its render
+ * view — `GodotVulkanRenderView` or the GL one depending on the driver — and
+ * neither is exposed. All that matters is that it is a [SurfaceView], and both
+ * are.
+ *
+ * `TRANSLUCENT` is the other half. Without it the surface has no alpha channel
+ * to blend, and lifting it above the window just draws an opaque rectangle over
+ * everything.
+ */
+private fun liftSurfaceAboveWindow(root: ViewGroup) {
+    val surface = findSurfaceView(root)
+    if (surface == null) {
+        Log.w(TAG, "no SurfaceView found; the city will stay opaque")
+        return
+    }
+    surface.setZOrderOnTop(true)
+    surface.holder.setFormat(PixelFormat.TRANSLUCENT)
+}
+
+private fun findSurfaceView(view: View): SurfaceView? {
+    if (view is SurfaceView) return view
+    if (view is ViewGroup) {
+        for (index in 0 until view.childCount) {
+            findSurfaceView(view.getChildAt(index))?.let { return it }
+        }
+    }
+    return null
+}
+
+/**
  * Hosts [GodotFragment] in a Compose tree.
  *
  * The fragment goes into a plain [FrameLayout] with a generated id rather than
@@ -106,6 +141,20 @@ fun GodotCityView(
      * Passing the encoded state means the push re-runs whenever the city does.
      */
     state: String = "",
+    /**
+     * Whether the engine's surface blends with what is behind it.
+     *
+     * **Only safe when nothing is composited on top.** A `SurfaceView` sits
+     * *below* the window by default, so its transparent pixels reveal the window
+     * background — black — rather than the Compose content, which is drawn
+     * above. Lifting it above the window is what makes alpha blend with Compose,
+     * and it also puts the surface over every Compose control on the screen.
+     *
+     * So the Site tile, which has nothing over it, is transparent and sits in
+     * the painted landscape; the city editor, which has a back button and a
+     * build panel above it, is not.
+     */
+    transparent: Boolean = false,
     /** A square was touched. The shell decides what that means. */
     onCellTouched: (x: Int, z: Int) -> Unit = { _, _ -> },
 ) {
@@ -156,6 +205,12 @@ fun GodotCityView(
                     setReorderingAllowed(true)
                     if (existing != null) remove(existing)
                     add(this@apply.id, GodotFragment(), FRAGMENT_TAG)
+                }
+
+                // The engine builds its own SurfaceView, so the z-order can only
+                // be set once that exists — which is after the transaction runs.
+                if (transparent) {
+                    post { liftSurfaceAboveWindow(this) }
                 }
             }
         },

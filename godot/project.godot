@@ -18,19 +18,20 @@ run/main_scene="res://scenes/city/city_editor.tscn"
 
 [display]
 
-; NOT enabled, and here is what happens if you turn it on.
+; Lets the render view be created translucent. Half of the transparency story.
 ;
-; The city sits inside a painted landscape on the Site screen, so its surface
-; ought to be transparent. Setting `window/per_pixel_transparency/allowed=true`
-; does flip the engine's own flag — the log goes from "Render view should be
-; transparent: false" to "true" — but the result on a device is a **solid black
-; rectangle**, whether the environment clears to a colour or to zero alpha. The
-; SurfaceView goes translucent and then composites against black rather than
-; against the Compose content behind it.
+; The other half is the SurfaceView's z-order, and it is the half that decides
+; *what* the alpha blends against. A SurfaceView sits **below** the window by
+; default, so its transparent pixels reveal the window background — black — and
+; not the Compose content, which is drawn above it. `setZOrderOnTop(true)` lifts
+; it above the window instead, where alpha blends with what Compose has drawn.
 ;
-; The rest of that fix is the surface's pixel format and z-order, which is a
-; real change rather than a flag. Until then the city clears to Toolbox Pop's
-; sky, which blends with the screen's own sky well enough to live with.
+; That is why transparency is per-screen rather than global: on top, the surface
+; also covers every Compose control over it. The Site tile has nothing above it
+; and is transparent; the city editor has a back button and a build panel over
+; it and stays opaque. `city_editor.gd` reads which it is from the state the
+; shell sends.
+window/per_pixel_transparency/allowed=true
 
 ; The engine calls setRequestedOrientation on the host activity when it starts,
 ; and its handheld default is landscape — so embedding it rotated the whole app,

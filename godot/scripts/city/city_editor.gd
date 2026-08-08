@@ -20,6 +20,9 @@ const CityGridScript = preload("res://scripts/city/city_grid.gd")
 const BridgeScript = preload("res://bridge/city_bridge.gd")
 const TrafficScript = preload("res://scripts/city/traffic.gd")
 
+## Toolbox Pop's sky, used whenever the surface is opaque.
+const SKY := Color("a9e6f5")
+
 var view: Node3D
 var rig: Node3D
 var traffic: Node3D
@@ -91,10 +94,37 @@ func _on_city_state(state: Dictionary) -> void:
 	if dropped > 0:
 		push_warning("CityEditor: dropped %d piece(s) the grid refused" % dropped)
 
+	_set_transparent(bool(state.get("transparent", false)))
+
 	view.grid = grid
 	view.render()
 	traffic.rebuild(view)
 	rig.frame_grid(grid.size, view.manifest.cell_size)
+
+
+## Whether the city draws over the app or fills its own rectangle.
+##
+## The shell decides, because only the shell knows what is on top: the Site tile
+## has nothing over it and wants to sit in the painted landscape, while the city
+## editor has a back button and a build panel composited above and would hide
+## them behind a transparent surface lifted to the top.
+##
+## Clearing has to be told twice. The environment's background covers what the
+## camera draws; `set_default_clear_color` covers the framebuffer underneath it,
+## and leaving that one opaque is enough to make the whole surface opaque no
+## matter what the environment says.
+func _set_transparent(transparent: bool) -> void:
+	var world := get_node_or_null("WorldEnvironment") as WorldEnvironment
+	if world == null:
+		return
+
+	if transparent:
+		world.environment.background_mode = Environment.BG_CLEAR_COLOR
+		RenderingServer.set_default_clear_color(Color(0, 0, 0, 0))
+	else:
+		world.environment.background_mode = Environment.BG_COLOR
+		world.environment.background_color = SKY
+		RenderingServer.set_default_clear_color(SKY)
 
 
 ## A warm key light with enough fill that the north faces of buildings are not
@@ -103,17 +133,9 @@ func _on_city_state(state: Dictionary) -> void:
 func _build_environment() -> void:
 	var env := Environment.new()
 	env.background_mode = Environment.BG_COLOR
-	# Toolbox Pop's sky, so the city sits on the app's own paper rather than on
-	# the engine's default grey.
-	#
-	# **This should be transparent and is not, yet.** On the Site screen the city
-	# sits in a painted landscape and an opaque background puts a rectangle over
-	# it. `per_pixel_transparency/allowed` is on and the engine now logs "Render
-	# view should be transparent: true" — but clearing to a zero-alpha colour
-	# renders solid black, so the surface is not actually compositing alpha. The
-	# remaining half is the SurfaceView's own pixel format and z-order, which is
-	# a bigger change than a flat colour is worth today.
-	env.background_color = Color("a9e6f5")
+	# Toolbox Pop's sky. Replaced by nothing at all when the shell says the
+	# surface is transparent — see [method _set_transparent].
+	env.background_color = SKY
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	env.ambient_light_color = Color("d8f3ee")
 	env.ambient_light_energy = 0.55

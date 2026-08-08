@@ -33,6 +33,7 @@ import com.timestabletradies.core.network.RunSubmission
 import com.timestabletradies.core.network.StudentDto
 import com.timestabletradies.core.network.StudentSettings
 import com.timestabletradies.core.network.TradiesRepository
+import com.timestabletradies.data.CityStore
 import com.timestabletradies.data.DailyJobLog
 import com.timestabletradies.data.Graph
 import com.timestabletradies.ui.boss.BossIntroScreen
@@ -41,6 +42,7 @@ import com.timestabletradies.ui.crew.CrewRaceLobbyScreen
 import com.timestabletradies.ui.crew.JobChallengeScreen
 import com.timestabletradies.ui.crew.TradeExpoScreen
 import com.timestabletradies.ui.grandparent.StickerSendScreen
+import com.timestabletradies.godot.CityState
 import com.timestabletradies.godot.GodotPack
 import com.timestabletradies.ui.house.CityScreen
 import com.timestabletradies.ui.house.HouseProjectScreen
@@ -125,6 +127,7 @@ fun TradiesApp(
     val context = LocalContext.current
     val repository = remember { Graph.repository(context) }
     val dailyJobs = remember { DailyJobLog(context) }
+    val cityStore = remember { CityStore(context) }
     val scope = rememberCoroutineScope()
 
     /* ------------------------------------------------------------- session */
@@ -929,7 +932,17 @@ fun TradiesApp(
         FullRoute.City -> CityScreen(
             cityName = "${student?.displayName ?: "Your"}'s City",
             level = CityLevel.levelOf(student?.cityXp ?: 0),
+            gridSize = CityState.describedGridSize(playableTables, grid),
             engineAvailable = GodotPack.isAvailable(context),
+            state = {
+                CityState.encode(
+                    unlockedTables = playableTables,
+                    grid = grid,
+                    pieces = CityState.piecesFrom(
+                        student?.id?.let { cityStore.layout(it) },
+                    ),
+                )
+            },
             onBack = { pop() },
             onShop = {
                 pop()

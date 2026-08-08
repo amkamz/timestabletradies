@@ -19,6 +19,9 @@ import com.timestabletradies.ui.TradiesApp
 import org.godotengine.godot.Godot
 import org.godotengine.godot.GodotFragment
 import org.godotengine.godot.GodotHost
+import org.godotengine.godot.plugin.GodotPlugin
+import com.timestabletradies.godot.BridgeHolder
+import com.timestabletradies.godot.CityBridge
 
 /**
  * The app's one activity, and the engine's host.
@@ -31,7 +34,20 @@ import org.godotengine.godot.GodotHost
  * defaults — plus [getCommandLine], which is how the engine is told where its
  * project data is. Everything else about the engine's behaviour is left alone.
  */
-class MainActivity : FragmentActivity(), GodotHost {
+class MainActivity : FragmentActivity(), GodotHost, BridgeHolder {
+
+    /**
+     * The engine bridge, created when Godot first asks for its plugins.
+     *
+     * **Compose state, not a plain field.** The plugin cannot exist until the
+     * engine is initialising, which happens *after* the city screen has already
+     * composed and read this — so a plain field is null at the only moment
+     * anything looks at it, and the screen never learns otherwise. Making it
+     * observable is what lets the composable pick the bridge up when it appears.
+     */
+    override var cityBridge: CityBridge? by mutableStateOf(null)
+        private set
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
@@ -103,6 +119,22 @@ class MainActivity : FragmentActivity(), GodotHost {
 
     override fun getGodot(): Godot? =
         (supportFragmentManager.findFragmentByTag("godot_city") as? GodotFragment)?.godot
+
+    /**
+     * The one plugin, supplied by the host.
+     *
+     * A host-provided plugin needs no manifest metadata and no `.gdap`, and its
+     * lifetime is the activity's — which is what we want, because the engine
+     * outlives every individual screen and the bridge has to outlive it too.
+     *
+     * Built once and remembered: Godot asks for this more than once, and
+     * handing back a fresh instance each time would leave the Compose layer
+     * holding a callback on a bridge the engine is no longer using.
+     */
+    override fun getHostPlugins(godot: Godot): MutableSet<GodotPlugin> {
+        val bridge = cityBridge ?: CityBridge(godot).also { cityBridge = it }
+        return mutableSetOf(bridge)
+    }
 
     /**
      * What the engine is started with: nothing.

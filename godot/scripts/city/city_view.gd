@@ -133,6 +133,16 @@ func render() -> void:
 		_pieces_root.add_child(node)
 
 
+## Which cell a point on the ground plane falls in.
+##
+## Floor, not round: cell (0,0) spans 0 to one cell width, so a point at 1.9 in
+## a 2-unit grid is still in the first square. Rounding would put the boundaries
+## half a cell out and make every tap near an edge land on the wrong tile.
+func cell_at(world: Vector3) -> Vector2i:
+	var size: float = manifest.cell_size
+	return Vector2i(int(floor(world.x / size)), int(floor(world.z / size)))
+
+
 ## Centre of the whole city, for the camera to frame.
 func centre() -> Vector3:
 	var extent: float = float(grid.size) * manifest.cell_size

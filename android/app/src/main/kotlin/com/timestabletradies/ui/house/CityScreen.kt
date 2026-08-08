@@ -9,6 +9,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
@@ -51,15 +55,27 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 fun CityScreen(
     cityName: String,
     level: Int,
+    gridSize: Int,
     engineAvailable: Boolean,
+    /** The city, as JSON, ready to push to the engine. */
+    state: () -> String,
     onBack: () -> Unit,
     onShop: () -> Unit,
 ) {
+    // Which square the child last touched. Held here rather than in the engine
+    // because the engine reports *which* square and this decides what that
+    // means — the split that keeps every control a Compose node.
+    var selected by remember { mutableStateOf<Pair<Int, Int>?>(null) }
+
     Box(Modifier.fillMaxSize()) {
         if (engineAvailable) {
             GodotCityView(
                 modifier = Modifier.fillMaxSize(),
-                contentDescription = "$cityName, level $level. Drag to turn the town.",
+                contentDescription =
+                    "$cityName, level $level. A $gridSize by $gridSize town. " +
+                        "Drag to turn it.",
+                state = state,
+                onCellTouched = { x, z -> selected = x to z },
             )
         } else {
             Box(
@@ -128,6 +144,31 @@ fun CityScreen(
                 .windowInsetsPadding(PopInsets.content)
                 .padding(horizontal = 14.dp, vertical = 12.dp),
         ) {
+            // The building panel. Tap a square and it says which one — the
+            // inventory and placement land here next, in Compose, so that
+            // tap-a-piece-then-tap-a-square stays a real focus order rather
+            // than a gesture inside a surface no screen reader can enter.
+            if (selected != null) {
+                val (x, z) = selected!!
+                PopCard(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        "Square ${x + 1}, ${z + 1}",
+                        style = PopType.Title,
+                        color = PopTokens.Ink,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Text(
+                        "Blocks to put here are coming next.",
+                        style = PopType.Small,
+                        color = PopTokens.Mud,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+                PopGap(10.dp)
+            }
+
             PopButton(
                 text = "GET MORE BLOCKS",
                 onClick = onShop,

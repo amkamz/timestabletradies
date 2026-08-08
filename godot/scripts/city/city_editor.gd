@@ -16,11 +16,17 @@ extends Node3D
 const CityViewScript = preload("res://scripts/city/city_view.gd")
 const IsoCameraScript = preload("res://scripts/city/iso_camera.gd")
 const SampleCityScript = preload("res://scripts/city/sample_city.gd")
+const CityGridScript = preload("res://scripts/city/city_grid.gd")
+const BridgeScript = preload("res://bridge/city_bridge.gd")
 
 var view: Node3D
 var rig: Node3D
+var bridge = BridgeScript.new()
 
 var _dragging := false
+## Set when a press began, so a tap can be told from the end of a drag.
+var _press_position := Vector2.ZERO
+var _press_travelled := 0.0
 
 
 func _ready() -> void:
@@ -30,13 +36,51 @@ func _ready() -> void:
 	view.name = "CityView"
 	add_child(view)
 
-	# `_ready` has run on the view by the time `add_child` returns, so the
-	# manifest is loaded and the grid can be handed over and drawn.
+	# The sample city is the fallback, not the default. On a phone the shell
+	# replaces it within a frame or two; on a laptop there is no shell, and
+	# having something to draw is what keeps the renderer runnable and
+	# screenshot-testable without a device attached.
 	view.grid = SampleCityScript.build()
 	view.render()
 
 	_build_camera()
+
+	if bridge.connect_to_host():
+		bridge.city_state_received.connect(_on_city_state)
+		bridge.announce_ready()
+
 	_handle_capture_request()
+
+
+## Replace the whole city with the one the shell sent.
+##
+## Wholesale rather than a diff. A 6 × 6 town is thirty-six cells; an
+## incremental protocol would buy nothing and would eventually disagree with the
+## model it exists to mirror.
+func _on_city_state(state: Dictionary) -> void:
+	var grid = CityGridScript.new()
+
+	# The size rule lives in `city_grid.gd` and is tested there, so the shell
+	# sends the *inputs* — which tables are open and how often each square
+	# number has been answered — rather than a size it worked out itself. One
+	# implementation, and the two can never drift.
+	var unlocked: Array = state.get("unlocked_tables", [])
+	var squares: Dictionary = {}
+	for key in state.get("square_correct", {}):
+		squares[int(key)] = int(state["square_correct"][key])
+
+	grid.grow_to(CityGridScript.size_for(unlocked, squares))
+
+	var dropped: int = grid.from_dict({
+		"size": grid.size,
+		"pieces": state.get("pieces", []),
+	})
+	if dropped > 0:
+		push_warning("CityEditor: dropped %d piece(s) the grid refused" % dropped)
+
+	view.grid = grid
+	view.render()
+	rig.frame_grid(grid.size, view.manifest.cell_size)
 
 
 ## A warm key light with enough fill that the north faces of buildings are not
@@ -109,21 +153,70 @@ func _build_camera() -> void:
 ## this, per the standing rule that dragging is never the only way to do
 ## anything (docs/native/vision.md). This gesture is the *additional* route, not
 ## the primary one.
+## How far a finger may travel and still count as a tap rather than a drag.
+const TAP_SLOP := 12.0
+
+
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_LEFT:
-			_dragging = event.pressed
-			if not event.pressed:
-				rig.release_drag()
+			if event.pressed:
+				_dragging = true
+				_press_position = event.position
+				_press_travelled = 0.0
+			else:
+				_dragging = false
+				# A tap and the end of a drag arrive as the same event, so the
+				# distance travelled since the press is what tells them apart —
+				# the same touch-slop rule the rest of the app uses, so a tap
+				# never accidentally spins the town and a drag never
+				# accidentally selects a square.
+				if _press_travelled <= TAP_SLOP:
+					_report_touch_at(event.position)
+				else:
+					rig.release_drag()
 		elif event.button_index == MOUSE_BUTTON_WHEEL_UP:
 			rig.zoom_in()
 		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
 			rig.zoom_out()
 	elif event is InputEventMouseMotion and _dragging:
+		_press_travelled += event.relative.length()
+		if _press_travelled <= TAP_SLOP:
+			return
 		# `velocity` is the pointer's speed in pixels per second, which the
 		# engine already tracks — it is what lets the release tell a flick from
 		# a careful placement without this having to time anything itself.
 		rig.drag(event.relative, event.velocity)
+
+
+## Turn a screen position into a square, and tell the shell about it.
+##
+## The engine reports *which* square. It does not decide what touching one
+## means — that is the shell's, because the shell is where the accessibility
+## tree lives and where a child's coins and inventory are known.
+func _report_touch_at(screen: Vector2) -> void:
+	if not bridge.available():
+		return
+
+	var camera: Camera3D = rig.get_node_or_null("Camera3D")
+	if camera == null:
+		return
+
+	var origin := camera.project_ray_origin(screen)
+	var direction := camera.project_ray_normal(screen)
+
+	# The city is flat, so a ray-versus-ground-plane intersection is the whole
+	# of hit-testing — no colliders, no physics, nothing to keep in step with
+	# the tiles as they change.
+	if is_zero_approx(direction.y):
+		return
+	var distance := -origin.y / direction.y
+	if distance < 0.0:
+		return
+
+	var cell: Vector2i = view.cell_at(origin + direction * distance)
+	if view.grid.in_bounds(cell):
+		bridge.report_cell_touched(cell)
 
 
 ## `--capture <path>` renders one frame, writes it and quits.

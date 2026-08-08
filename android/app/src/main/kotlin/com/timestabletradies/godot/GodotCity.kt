@@ -7,6 +7,7 @@ import android.widget.FrameLayout
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.viewinterop.AndroidView
@@ -95,7 +96,24 @@ object GodotPack {
 fun GodotCityView(
     modifier: Modifier = Modifier,
     contentDescription: String,
+    /** The state to push whenever the engine says it is ready for one. */
+    state: () -> String = { "" },
+    /** A square was touched. The shell decides what that means. */
+    onCellTouched: (x: Int, z: Int) -> Unit = { _, _ -> },
 ) {
+    // The bridge belongs to the activity and outlives this screen, so it is
+    // read rather than created here.
+    val bridge = (LocalContext.current as? BridgeHolder)?.cityBridge
+
+    DisposableEffect(bridge) {
+        bridge?.onCellTouched = { x, z -> onCellTouched(x, z) }
+        // Order-independent: the bridge holds this until the engine is in a
+        // position to draw it, and sends it itself if the scene was already up.
+        bridge?.sendState(state())
+
+        onDispose { bridge?.onCellTouched = null }
+    }
+
     AndroidView(
         modifier = modifier.semantics { this.contentDescription = contentDescription },
         factory = { context ->

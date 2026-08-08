@@ -19,6 +19,31 @@ import org.json.JSONObject
 object CityState {
 
     /**
+     * What a child can put down.
+     *
+     * Hardcoded, and it shouldn't be: what a child owns is a purchase made with
+     * bricks, and purchases have no endpoint yet (§1.1). Until they do,
+     * everything is offered — which is the honest placeholder, because a
+     * catalogue that pretended to be an inventory would have to invent what had
+     * been bought.
+     *
+     * Keys match `assets/manifest.json`. A key with no entry there renders
+     * nothing and logs, rather than crashing.
+     */
+    val PALETTE: List<com.timestabletradies.ui.house.BuildPiece> = listOf(
+        com.timestabletradies.ui.house.BuildPiece("build_workshop", "House"),
+        com.timestabletradies.ui.house.BuildPiece("build_yard", "Shop"),
+        com.timestabletradies.ui.house.BuildPiece("build_depot", "Tower"),
+        com.timestabletradies.ui.house.BuildPiece("road_straight", "Road"),
+        com.timestabletradies.ui.house.BuildPiece("road_corner", "Corner"),
+        com.timestabletradies.ui.house.BuildPiece("road_tsplit", "T-junction"),
+        com.timestabletradies.ui.house.BuildPiece("road_junction", "Crossroads"),
+        com.timestabletradies.ui.house.BuildPiece("bush", "Tree"),
+        com.timestabletradies.ui.house.BuildPiece("bench", "Bench"),
+        com.timestabletradies.ui.house.BuildPiece("watertower", "Water tower"),
+    )
+
+    /**
      * Build the message.
      *
      * @param pieces the saved layout, as the `pieces` array the grid serialises

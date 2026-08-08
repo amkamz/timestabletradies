@@ -30,6 +30,12 @@ var _press_travelled := 0.0
 
 
 func _ready() -> void:
+	# Pinch needs two real fingers, and mouse emulation collapses every touch
+	# into a single synthetic pointer — so the second finger would simply never
+	# arrive. Turning it off costs nothing: a laptop still has a real mouse, and
+	# the mouse handlers below stay for it.
+	Input.set_emulate_mouse_from_touch(false)
+
 	_build_environment()
 
 	view = CityViewScript.new()
@@ -157,36 +163,116 @@ func _build_camera() -> void:
 const TAP_SLOP := 12.0
 
 
+## Fingers currently down, by index. Pinch needs two, so they have to be tracked
+## rather than handled one event at a time.
+var _touches: Dictionary = {}
+var _pinch_distance := 0.0
+
+
 func _unhandled_input(event: InputEvent) -> void:
-	if event is InputEventMouseButton:
+	if event is InputEventScreenTouch:
+		_handle_touch(event)
+	elif event is InputEventScreenDrag:
+		_handle_drag(event)
+	elif event is InputEventMouseButton:
+		# Desktop only — a real mouse, for running the project on a laptop.
+		# Mouse-from-touch emulation is off (see `_ready`), so these never
+		# double up with the touch handlers above.
 		if event.button_index == MOUSE_BUTTON_LEFT:
 			if event.pressed:
-				_dragging = true
-				_press_position = event.position
-				_press_travelled = 0.0
+				_begin_press(event.position)
 			else:
-				_dragging = false
-				# A tap and the end of a drag arrive as the same event, so the
-				# distance travelled since the press is what tells them apart —
-				# the same touch-slop rule the rest of the app uses, so a tap
-				# never accidentally spins the town and a drag never
-				# accidentally selects a square.
-				if _press_travelled <= TAP_SLOP:
-					_report_touch_at(event.position)
-				else:
-					rig.release_drag()
+				_end_press(event.position)
 		elif event.button_index == MOUSE_BUTTON_WHEEL_UP:
 			rig.zoom_in()
 		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
 			rig.zoom_out()
 	elif event is InputEventMouseMotion and _dragging:
-		_press_travelled += event.relative.length()
-		if _press_travelled <= TAP_SLOP:
-			return
-		# `velocity` is the pointer's speed in pixels per second, which the
-		# engine already tracks — it is what lets the release tell a flick from
-		# a careful placement without this having to time anything itself.
-		rig.drag(event.relative, event.velocity)
+		_continue_press(event.relative, event.velocity)
+
+
+func _handle_touch(event: InputEventScreenTouch) -> void:
+	if event.pressed:
+		_touches[event.index] = event.position
+		if _touches.size() == 1:
+			_begin_press(event.position)
+		elif _touches.size() == 2:
+			# A second finger cancels whatever the first was doing. Without
+			# this, pinching also spins the town, because the two fingers rarely
+			# move by the same amount.
+			_dragging = false
+			_pinch_distance = _current_pinch_distance()
+	else:
+		var was_alone := _touches.size() == 1
+		_touches.erase(event.index)
+		if was_alone:
+			_end_press(event.position)
+		elif _touches.is_empty():
+			rig.release_drag()
+
+
+func _handle_drag(event: InputEventScreenDrag) -> void:
+	_touches[event.index] = event.position
+
+	if _touches.size() >= 2:
+		_apply_pinch()
+		return
+
+	if _dragging:
+		_continue_press(event.relative, event.velocity)
+
+
+## Zoom by how much the gap between two fingers changed.
+##
+## A ratio rather than a difference, so the gesture feels the same whether the
+## town is filling the screen or sitting small in the middle of it — moving your
+## fingers apart by an inch should always roughly double the size, not add a
+## fixed number of world units.
+func _apply_pinch() -> void:
+	var distance := _current_pinch_distance()
+	if _pinch_distance <= 0.0 or distance <= 0.0:
+		_pinch_distance = distance
+		return
+
+	rig.zoom_by_factor(distance / _pinch_distance)
+	_pinch_distance = distance
+
+
+func _current_pinch_distance() -> float:
+	var points: Array = _touches.values()
+	if points.size() < 2:
+		return 0.0
+	return points[0].distance_to(points[1])
+
+
+func _begin_press(position: Vector2) -> void:
+	_dragging = true
+	_press_position = position
+	_press_travelled = 0.0
+
+
+func _continue_press(relative: Vector2, velocity: Vector2) -> void:
+	_press_travelled += relative.length()
+	if _press_travelled <= TAP_SLOP:
+		return
+	# `velocity` is the pointer's speed in pixels per second, which the engine
+	# already tracks — it is what lets the release tell a flick from a careful
+	# placement without this having to time anything itself.
+	rig.drag(relative, velocity)
+
+
+func _end_press(position: Vector2) -> void:
+	if not _dragging:
+		return
+	_dragging = false
+	# A tap and the end of a drag arrive as the same event, so the distance
+	# travelled since the press is what tells them apart — the same touch-slop
+	# rule the rest of the app uses, so a tap never accidentally spins the town
+	# and a drag never accidentally selects a square.
+	if _press_travelled <= TAP_SLOP:
+		_report_touch_at(position)
+	else:
+		rig.release_drag()
 
 
 ## Turn a screen position into a square, and tell the shell about it.

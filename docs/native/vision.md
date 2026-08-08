@@ -158,6 +158,18 @@ stage bar becomes a spatial grid with placeable, purchasable pieces.
 - **The city is alive.** The child's own tradie and random NPCs walk the roads
   and in and out of buildings; cars drive along the roads.
 
+## The city, still to build
+
+**decided, not yet built**
+
+- **Ghost roads at the edges.** Where a road meets the boundary, one tile of
+  road continues past it and fades out with distance. That is where cars enter
+  and leave, fading in and out with it — so traffic arrives from somewhere
+  rather than appearing out of nothing at the town's edge.
+- **NPCs and traffic.** The child's own tradie and a few others walking the
+  roads and in and out of buildings; cars driving the road graph.
+- **Pinch to zoom**, alongside the buttons.
+
 > ⚠️ **Drag cannot be the only way to place a piece.** "Dragging is never
 > required" is a standing rule of this product (WCAG 2.2 SC 2.5.7), and §2.7
 > records how Measure Up already handles it: the drag was added *on top of*
@@ -178,11 +190,31 @@ Both are already queryable — `fact_mastery` is keyed `(student_id, a, b)` with
 also immune to the `7×10` / `10×7` canonicalisation bug flagged in the README,
 being its own commutation.
 
-**Open: does this generalise?** The obvious reading is *n × n unlocked and
-n × n answered correctly n times → an n × n city*, which is a lovely rule and
-ends at a 12 × 12 city of 144 tiles — the same 144 as the mastery grid. That
-symmetry is either the best thing in the design or one grid too many. Needs a
-decision on where it stops.
+**Superseded — the growth is contiguous, and it starts at 1 × 1.**
+
+The rule above ("take the highest qualifying n") is what is currently
+implemented and it is wrong for the shape the game actually wants:
+
+- **A new city is 1 × 1**, zoomed in close, with a single road on it. One
+  square is the whole town, which is the right size for a child who has only
+  met ×1.
+- **Growth is contiguous.** ×10 is the third zone in the curriculum order, so a
+  child unlocks it long before ×3 through ×9 — and a town cannot jump from
+  1 × 1 to 10 × 10. When ×10 opens, a prompt says so: *"unlock the nine in
+  between to grow your city — start with 2."*
+- **Each table adds a row and a column.** Finish ×2 and the town becomes
+  2 × 2; ×3 makes it 3 × 3, and so on.
+- **The default road can be deleted**, like anything else. It is a starting
+  point, not furniture.
+
+The `n × n correct n times` condition is still the charming half and should
+survive; what changes is that *n − 1* must already be done. `CityGrid.size_for`
+takes the highest qualifying n today and needs to take the longest unbroken run
+instead — a one-function change with its tests beside it.
+
+Buildings **upgrade in place** on their square rather than needing a bigger
+footprint, which is what makes a 1 × 1 town playable at all: there is somewhere
+to spend bricks before there is anywhere to put a second building.
 
 ---
 

@@ -67,12 +67,53 @@ func _load_mesh(key: String) -> PackedScene:
 	return scene
 
 
-## Categories that arrive with their own slab underneath them.
+## A sibling mesh of a manifest piece — `building_A` plus `_withoutBase`.
 ##
-## Roads and buildings in this pack are modelled on a base — that is exactly
-## what the `_withoutBase` variants exist to opt out of. Props are not: a bush
-## is a bush, and it needs something to stand on.
-const SELF_BASING := ["road", "building", "ground"]
+## Quiet when absent, unlike [method _load_mesh]. These are an optimisation the
+## pack happens to offer, not a promise it makes: a piece with no baseless
+## variant simply stands on the tile with its own slab, and warning about every
+## one of them would bury the warnings that matter.
+func _load_variant(key: String, suffix: String) -> PackedScene:
+	var cache_key := key + suffix
+	if _mesh_cache.has(cache_key):
+		return _mesh_cache[cache_key]
+
+	var base_path: String = manifest.mesh_path(key)
+	var path := base_path.replace(".gltf", suffix + ".gltf")
+	var scene: PackedScene = null
+	if path != base_path and ResourceLoader.exists(path):
+		scene = load(path)
+
+	_mesh_cache[cache_key] = scene
+	return scene
+
+
+## Categories that *are* the floor of their cell.
+##
+## Everything else stands on one. Buildings used to be in this list, because the
+## pack models them on their own slab — but that slab is exactly 0.1 thick and
+## cannot be made thicker without stretching the building on top of it, so they
+## now use the pack's `_withoutBase` variants and stand on a real tile like
+## everything else.
+const SELF_BASING := ["road", "ground"]
+
+## How thick the pack authors its base slabs.
+const PACK_BASE_THICKNESS := 0.1
+
+## How thick we want them.
+##
+## Flat tiles made the city look like paper laid on a table. A fifth of a cell
+## of height turns each square into a block, which reads as a thing built rather
+## than a thing printed — and it costs nothing, because the slab is already
+## geometry and only its scale changes.
+const TILE_HEIGHT := 0.4
+
+## What sits on top of a tile starts here.
+const TILE_TOP := TILE_HEIGHT
+
+## `_withoutBase` meshes are authored expecting a 0.1 slab beneath them, so they
+## are lifted by the difference rather than by the whole height.
+const BASELESS_LIFT := TILE_HEIGHT - PACK_BASE_THICKNESS
 
 
 ## Lay a ground tile under every cell that isn't already standing on one.
@@ -103,9 +144,19 @@ func _render_ground() -> void:
 				if SELF_BASING.has(category):
 					continue
 
-			var tile: Node3D = scene.instantiate()
-			tile.position = world_position(cell)
-			_ground_root.add_child(tile)
+			_ground_root.add_child(_base_tile(scene, cell))
+
+
+## A base slab, stretched to the height the city is built at.
+##
+## Scaling rather than a different mesh: the slab is a flat-topped box, so its
+## top surface stays exactly where it was and only the side the eye sees gets
+## taller.
+func _base_tile(scene: PackedScene, cell: Vector2i) -> Node3D:
+	var tile: Node3D = scene.instantiate()
+	tile.position = world_position(cell)
+	tile.scale = Vector3(1.0, TILE_HEIGHT / PACK_BASE_THICKNESS, 1.0)
+	return tile
 
 
 func render() -> void:
@@ -116,16 +167,34 @@ func render() -> void:
 
 	for entry in grid.to_dict()["pieces"]:
 		var key := str(entry["key"])
-		var scene := _load_mesh(key)
-		if scene == null:
-			continue
-
 		var anchor := Vector2i(int(entry["anchor"][0]), int(entry["anchor"][1]))
 		var footprint := Vector2i(int(entry["footprint"][0]), int(entry["footprint"][1]))
 		var steps := int(entry["rot"])
+		var is_floor := SELF_BASING.has(manifest.category_of(key))
+
+		var scene: PackedScene = null
+		var lift := 0.0
+
+		if is_floor:
+			# Roads *are* the floor, so they are stretched like the ground.
+			scene = _load_mesh(key)
+		else:
+			# Anything standing on a tile prefers the pack's baseless variant,
+			# so the cell has one slab under it rather than two stacked.
+			scene = _load_variant(key, "_withoutBase")
+			lift = BASELESS_LIFT
+			if scene == null:
+				scene = _load_mesh(key)
+				lift = TILE_TOP
+
+		if scene == null:
+			continue
 
 		var node: Node3D = scene.instantiate()
 		node.position = world_position(anchor, CityGridScript.rotated_footprint(footprint, steps))
+		node.position.y = lift
+		if is_floor:
+			node.scale = Vector3(1.0, TILE_HEIGHT / PACK_BASE_THICKNESS, 1.0)
 		# Rotation is about Y, in four 90° steps. The ground plane is XZ and the
 		# axis pointing up out of it is Y — see the note in `iso_camera.gd`.
 		node.rotation.y = deg_to_rad(-90.0 * steps)

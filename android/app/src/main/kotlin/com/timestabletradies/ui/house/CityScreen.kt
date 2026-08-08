@@ -29,6 +29,7 @@ import com.timestabletradies.core.designsystem.PopSize
 import com.timestabletradies.core.designsystem.PopTokens
 import com.timestabletradies.core.designsystem.PopTone
 import com.timestabletradies.core.designsystem.PopType
+import com.timestabletradies.godot.CityLayout
 import com.timestabletradies.godot.GodotCityView
 import androidx.compose.foundation.layout.windowInsetsPadding
 
@@ -57,15 +58,19 @@ fun CityScreen(
     level: Int,
     gridSize: Int,
     engineAvailable: Boolean,
-    /** The city, as JSON, ready to push to the engine. */
-    state: () -> String,
+    layout: CityLayout,
+    palette: List<BuildPiece>,
+    /** Encodes a layout into the JSON the engine is sent. */
+    encode: (CityLayout) -> String,
+    onLayoutChanged: (CityLayout) -> Unit,
     onBack: () -> Unit,
     onShop: () -> Unit,
 ) {
     // Which square the child last touched. Held here rather than in the engine
     // because the engine reports *which* square and this decides what that
     // means — the split that keeps every control a Compose node.
-    var selected by remember { mutableStateOf<Pair<Int, Int>?>(null) }
+    var selectedCell by remember { mutableStateOf<Pair<Int, Int>?>(null) }
+    var selectedPiece by remember { mutableStateOf<String?>(null) }
 
     Box(Modifier.fillMaxSize()) {
         if (engineAvailable) {
@@ -74,8 +79,15 @@ fun CityScreen(
                 contentDescription =
                     "$cityName, level $level. A $gridSize by $gridSize town. " +
                         "Drag to turn it.",
-                state = state,
-                onCellTouched = { x, z -> selected = x to z },
+                state = { encode(layout) },
+                onCellTouched = { x, z ->
+                    selectedCell = x to z
+                    // A block in hand goes down where you tapped; an empty hand
+                    // just selects the square so it can be turned or cleared.
+                    selectedPiece?.let { key ->
+                        onLayoutChanged(layout.place(key, x, z))
+                    }
+                },
             )
         } else {
             Box(
@@ -144,30 +156,25 @@ fun CityScreen(
                 .windowInsetsPadding(PopInsets.content)
                 .padding(horizontal = 14.dp, vertical = 12.dp),
         ) {
-            // The building panel. Tap a square and it says which one — the
-            // inventory and placement land here next, in Compose, so that
-            // tap-a-piece-then-tap-a-square stays a real focus order rather
-            // than a gesture inside a surface no screen reader can enter.
-            if (selected != null) {
-                val (x, z) = selected!!
-                PopCard(modifier = Modifier.fillMaxWidth()) {
-                    Text(
-                        "Square ${x + 1}, ${z + 1}",
-                        style = PopType.Title,
-                        color = PopTokens.Ink,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    Text(
-                        "Blocks to put here are coming next.",
-                        style = PopType.Small,
-                        color = PopTokens.Mud,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
-                PopGap(10.dp)
-            }
+            BuildPanel(
+                pieces = palette,
+                selectedPiece = selectedPiece,
+                selectedCell = selectedCell,
+                occupantName = selectedCell?.let { (x, z) ->
+                    layout.at(x, z)?.key?.let { key ->
+                        palette.firstOrNull { it.key == key }?.name ?: key
+                    }
+                },
+                onPickPiece = { selectedPiece = it },
+                onRotate = {
+                    selectedCell?.let { (x, z) -> onLayoutChanged(layout.rotateAt(x, z)) }
+                },
+                onRemove = {
+                    selectedCell?.let { (x, z) -> onLayoutChanged(layout.removeAt(x, z)) }
+                },
+            )
+
+            PopGap(10.dp)
 
             PopButton(
                 text = "GET MORE BLOCKS",

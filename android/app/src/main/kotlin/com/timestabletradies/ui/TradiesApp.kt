@@ -42,6 +42,7 @@ import com.timestabletradies.ui.crew.CrewRaceLobbyScreen
 import com.timestabletradies.ui.crew.JobChallengeScreen
 import com.timestabletradies.ui.crew.TradeExpoScreen
 import com.timestabletradies.ui.grandparent.StickerSendScreen
+import com.timestabletradies.godot.CityLayout
 import com.timestabletradies.godot.CityState
 import com.timestabletradies.godot.GodotPack
 import com.timestabletradies.ui.house.CityScreen
@@ -157,6 +158,17 @@ fun TradiesApp(
     var shopCategory by remember { mutableStateOf(ShopCategory.Hats) }
     var lockerSlot by remember { mutableStateOf(LockerSlot.Head) }
     var stickerSendFailed by remember { mutableStateOf(false) }
+
+    // The city, held here so it survives leaving the screen and coming back.
+    // Seeded from the store on first read; a student with nothing saved gets
+    // the starter streets rather than bare ground.
+    var cityLayout by remember(activeStudent?.id) {
+        mutableStateOf(
+            CityLayout.fromJson(
+                CityState.piecesFrom(activeStudent?.id?.let { cityStore.layout(it) }),
+            ),
+        )
+    }
     var jobsDoneToday by remember { mutableStateOf(dailyJobs.completedToday()) }
 
     // Purchases and equips are held here until `purchaseItem` / `equipItem`
@@ -934,14 +946,18 @@ fun TradiesApp(
             level = CityLevel.levelOf(student?.cityXp ?: 0),
             gridSize = CityState.describedGridSize(playableTables, grid),
             engineAvailable = GodotPack.isAvailable(context),
-            state = {
+            layout = cityLayout,
+            palette = CityState.PALETTE,
+            encode = { edited ->
                 CityState.encode(
                     unlockedTables = playableTables,
                     grid = grid,
-                    pieces = CityState.piecesFrom(
-                        student?.id?.let { cityStore.layout(it) },
-                    ),
+                    pieces = edited.toJson(),
                 )
+            },
+            onLayoutChanged = { next ->
+                cityLayout = next
+                student?.id?.let { cityStore.save(it, next.toJson().toString()) }
             },
             onBack = { pop() },
             onShop = {

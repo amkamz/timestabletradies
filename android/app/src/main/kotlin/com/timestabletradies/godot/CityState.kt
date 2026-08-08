@@ -31,15 +31,15 @@ object CityState {
      * nothing and logs, rather than crashing.
      */
     val PALETTE: List<com.timestabletradies.ui.house.BuildPiece> = listOf(
-        com.timestabletradies.ui.house.BuildPiece("build_workshop", "House"),
-        com.timestabletradies.ui.house.BuildPiece("build_yard", "Shop"),
-        com.timestabletradies.ui.house.BuildPiece("build_depot", "Tower"),
+        com.timestabletradies.ui.house.BuildPiece("building_A", "House"),
+        com.timestabletradies.ui.house.BuildPiece("building_C", "Shop"),
+        com.timestabletradies.ui.house.BuildPiece("building_E", "Flats"),
+        com.timestabletradies.ui.house.BuildPiece("building_H", "Tower"),
         com.timestabletradies.ui.house.BuildPiece("road_straight", "Road"),
         com.timestabletradies.ui.house.BuildPiece("road_corner", "Corner"),
         com.timestabletradies.ui.house.BuildPiece("road_tsplit", "T-junction"),
         com.timestabletradies.ui.house.BuildPiece("road_junction", "Crossroads"),
         com.timestabletradies.ui.house.BuildPiece("bush", "Tree"),
-        com.timestabletradies.ui.house.BuildPiece("bench", "Bench"),
         com.timestabletradies.ui.house.BuildPiece("watertower", "Water tower"),
     )
 

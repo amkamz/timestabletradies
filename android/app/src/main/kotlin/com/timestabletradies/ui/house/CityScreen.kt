@@ -79,7 +79,7 @@ fun CityScreen(
                 contentDescription =
                     "$cityName, level $level. A $gridSize by $gridSize town. " +
                         "Drag to turn it.",
-                state = { encode(layout) },
+                state = encode(layout),
                 onCellTouched = { x, z ->
                     selectedCell = x to z
                     // A block in hand goes down where you tapped; an empty hand

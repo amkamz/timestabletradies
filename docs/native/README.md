@@ -169,6 +169,7 @@ coins stop with no explanation reads it as the game breaking.
 - **[Screens and modes — current state, and where it should land](screens.md)**
 - **[The vision, page by page](vision.md)** — product intent, in progress
 - **[Godot asset contract](godot-asset-contract.md)** — naming and structure every 3D asset must obey
+- **[The test account](test-account.md)** — signing the app in on a device
 - [Part 0 — Decisions to lock before any code](#part-0--decisions-to-lock-before-any-code)
 - [Part 1 — Server work (platform-neutral, do first)](#part-1--server-work-platform-neutral-do-first)
 - [Part 2 — Android](#part-2--android)

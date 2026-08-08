@@ -6,6 +6,7 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
@@ -96,8 +97,15 @@ object GodotPack {
 fun GodotCityView(
     modifier: Modifier = Modifier,
     contentDescription: String,
-    /** The state to push whenever the engine says it is ready for one. */
-    state: () -> String = { "" },
+    /**
+     * The city to draw, already encoded.
+     *
+     * A value, not a lambda. It was a lambda first and the city never changed:
+     * the effect that pushes it keyed only on the bridge, so putting a house
+     * down updated the model, updated the panel, and never reached the engine.
+     * Passing the encoded state means the push re-runs whenever the city does.
+     */
+    state: String = "",
     /** A square was touched. The shell decides what that means. */
     onCellTouched: (x: Int, z: Int) -> Unit = { _, _ -> },
 ) {
@@ -107,11 +115,13 @@ fun GodotCityView(
 
     DisposableEffect(bridge) {
         bridge?.onCellTouched = { x, z -> onCellTouched(x, z) }
+        onDispose { bridge?.onCellTouched = null }
+    }
+
+    LaunchedEffect(bridge, state) {
         // Order-independent: the bridge holds this until the engine is in a
         // position to draw it, and sends it itself if the scene was already up.
-        bridge?.sendState(state())
-
-        onDispose { bridge?.onCellTouched = null }
+        bridge?.sendState(state)
     }
 
     AndroidView(
